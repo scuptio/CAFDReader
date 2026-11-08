@@ -39,7 +39,7 @@ function sandboxDocument(html) {
   doc.querySelectorAll('meta[http-equiv="content-security-policy" i]').forEach(el=>el.remove());
   const nonce=crypto.randomUUID().replaceAll('-','');
   const policy=document.createElement('meta');policy.httpEquiv='Content-Security-Policy';
-  policy.content=`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src blob: data:; font-src blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'`;
+  policy.content=`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src blob: data:; font-src blob:; media-src blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'`;
   doc.querySelectorAll('script,style').forEach(el=>el.setAttribute('nonce',nonce));
   doc.head.prepend(policy);
   return '<!doctype html>\n'+doc.documentElement.outerHTML;

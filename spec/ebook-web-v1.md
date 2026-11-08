@@ -34,7 +34,7 @@
   Worker 单次执行操作超时 15 秒，初次网络打开限时 60 秒；失败/终止会拒绝全部待处理调用；应用握手限时 10 秒。
   关闭、换书或加载取消时先废弃当前会话，再关闭端口、销毁 iframe 并终止 Worker；
   迟到响应不能更新界面或重新挂载。应用创建的 Blob URL 随文档销毁而释放。
-  CSP 限制外部脚本/样式、fetch 等联网接口，图片与字体来自书内字节或 Blob URL。
+  CSP 限制外部脚本/样式、fetch 等联网接口，图片、字体与音视频来自书内字节或 Blob URL。
   iframe 隔离 DOM 和直接存储访问，不提供确定性的 JS CPU 计量；WASM 的可终止性
   由 Worker 保障。v1 以现代浏览器的模块 Worker、iframe sandbox 和 MessageChannel 为基准。
 
