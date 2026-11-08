@@ -9,6 +9,8 @@ def main():
     parser.add_argument('--binary',required=True,type=Path)
     parser.add_argument('--book',type=Path,default=ROOT/'tests/fixtures/reader.cafd')
     parser.add_argument('--report',type=Path)
+    parser.add_argument('--max-read-bytes',type=int)
+    parser.add_argument('--max-cache-bytes',type=int)
     args=parser.parse_args();reports=[]
     with tempfile.TemporaryDirectory(prefix='caf-native-check-') as directory:
         root=Path(directory)
@@ -21,6 +23,8 @@ def main():
             data=json.loads(report.read_text());value=data['result']
             for key in ['ok','wasm','embeddedApp','fontsReady','visible','persisted','isolated','range','parentBlocked','networkBlocked','nativeDenied','tokenAbsent']:
                 assert value[key] is True,(key,data)
+            if args.max_read_bytes is not None:assert value['runtimeStats']['bytesFetched']<=args.max_read_bytes,data
+            if args.max_cache_bytes is not None:assert value['runtimeStats']['cachedBytes']<=args.max_cache_bytes,data
             assert value['previousStarts']==run,data
             assert value['sandbox']=='allow-scripts',data
             reports.append(data)

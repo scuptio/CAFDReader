@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {openCaf,Artifact} from '../web/reader/caf.js';
+const bytes=new Uint8Array(await readFile(new URL('fixtures/reader.cafd',import.meta.url)));
+const total=512*1024*1024,chunk=1024*1024;
+const saved={fetch:globalThis.fetch,self:globalThis.self,WorkerGlobalScope:globalThis.WorkerGlobalScope,XMLHttpRequest:globalThis.XMLHttpRequest,FileReaderSync:globalThis.FileReaderSync,WebAssembly:globalThis.WebAssembly};
+const slice=(from,length)=>{const result=new Uint8Array(length);if(from<bytes.length)result.set(bytes.subarray(from,Math.min(bytes.length,from+length)));return result;};
+let fetched=0;
+const range=(value)=>{assert.match(value,/^bytes=\d+-\d+$/);const [from,to]=value.slice(6).split('-').map(Number);assert.ok(to-from+1<=4*chunk,'不得请求整个大文件');fetched+=to-from+1;return {from,to,data:slice(from,to-from+1)};};
+try {
+ globalThis.WebAssembly=new Proxy(saved.WebAssembly,{get(target,key){return ['Suspending','promising'].includes(key)?undefined:Reflect.get(target,key);}});
+ globalThis.WorkerGlobalScope=class {};globalThis.self=new WorkerGlobalScope();
+ globalThis.fetch=async(_url,options)=>{const r=range(options.headers.Range);return {status:206,ok:true,headers:new Headers({'Content-Range':`bytes ${r.from}-${r.to}/${total}`}),arrayBuffer:async()=>r.data.buffer};};
+ globalThis.XMLHttpRequest=class {open(_method,_url,async){assert.equal(async,false);}setRequestHeader(key,value){assert.equal(key,'Range');this.range=value;}send(){const r=range(this.range);this.status=206;this.response=r.data.buffer;}};
+ const remote=await openCaf('https://fixture.invalid/large.cafd');const comp=await remote.instantiate('ebook');
+ assert.ok((await comp.callPacked('info')).title);assert.equal(remote.stats().mode,'http-range-worker');assert.ok(fetched<4*chunk);
+ globalThis.FileReaderSync=class {readAsArrayBuffer(part){return part.bytes.buffer;}};
+ const file={size:total,arrayBuffer(){throw Error('不允许把整个 File 转成 ArrayBuffer');},slice(from,to){const data=slice(from,to-from);return {bytes:data,arrayBuffer:async()=>data.buffer};}};
+ const local=await openCaf(file);assert.ok((await(await local.instantiate('ebook')).callPacked('info')).title);assert.equal(local.stats().mode,'blob-slices');assert.ok(local.stats().bytesFetched<chunk);
+ const hashes=Array.from({length:24},(_,i)=>createHash('sha256').update(new Uint8Array(chunk).fill(i+1)).digest('hex'));
+ const entries=hashes.map((hash,i)=>({kind:'file',name:`p${i}.bin`,hash,length:chunk,chunks:[hash],entries:[]}));
+ let modified=false;
+ const source={totalLen:()=>24*chunk,readAtSync(off,length){return new Uint8Array(length).fill(modified&&off===0?255:Math.floor(off/chunk)+1);},async readAt(off,length){return this.readAtSync(off,length);}};
+ const bounded=new Artifact(source,{}, {payloads:[{root:{kind:'dir',name:'',entries}}]},hashes.map((hash,i)=>({tag:1,offset:i*chunk,length:chunk,hash})),[],null);
+ for(let i=0;i<24;i++)await bounded.readPayload(`/p${i}.bin`);
+ assert.ok(bounded.stats().cachedBytes<=16*chunk);modified=true;
+ await assert.rejects(()=>bounded.readPayload('/p0.bin'),/hash mismatch/);
+ console.log('PASS 无 JSPI 的 512 MiB 虚拟地址空间按块读取、本地 File 切片、缓存上限与淘汰后重新验哈希');
+} finally {for(const [key,value] of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
