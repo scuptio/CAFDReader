@@ -1,0 +1,22 @@
+# 锁定源文本行尾，避免跨平台检出改变来源哈希。
+*.py text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.caf binary
+*.cafd binary
+*.wasm binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.icns binary
+
+*.rs text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.wit text eol=lf

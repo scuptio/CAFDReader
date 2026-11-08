@@ -1,0 +1,27 @@
+package cf:ebook@0.1.0;
+
+/// 电子书能力：目录、取篇、翻页窗口、书内检索。
+/// 所有复合值经 caf-abi 打包返回（本 profile 采用 UTF-8 JSON 编码）。
+interface ebook {
+  /// 书目信息：{ title, author, note, volumes, segments, quality }
+  info: func() -> string;
+
+  /// 目录树：[{ ref, title, level, children? }]（扁平列表，level 表层级）
+  toc: func() -> string;
+
+  /// 取一个 segment：{ ref, volume, heading, genre, original, notes[], prev, next }
+  get: func(ref: string) -> string;
+
+  /// 从 start 起连续 count 个 segment 的 JSON 数组（翻页窗口，跨卷续接）
+  window: func(start: string, count: u32) -> string;
+
+  /// 书内子串检索：{ hits: [{ ref, heading, snippet, count }], total }
+  search: func(query: string, max-results: u32) -> string;
+  /// 文档内词条检索，内容与来源由文档声明。
+  lookup: func(word: string) -> string;
+  entity: func(id: string) -> string;
+}
+
+world ebook-reader {
+  export ebook;
+}

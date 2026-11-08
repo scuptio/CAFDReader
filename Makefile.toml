@@ -1,0 +1,82 @@
+# 参考 ../mududb_p：根任务只编排，构建逻辑仍在现有脚本与 Tauri 中。
+[config]
+skip_core_tasks = true
+skip_git_env_info = true
+skip_crate_env_info = true
+min_version = "0.37.24"
+
+[tasks.default]
+alias = "help"
+
+[tasks.help]
+description = "列出项目任务；阅读器：cargo make reader [platform] [--plan]"
+category = "帮助"
+command = "node"
+args = ["scripts/python.mjs", "--cargo-make", "scripts/show_tasks.py", "${@}"]
+
+[tasks.doctor]
+description = "只读检查阅读器工具链：doctor [platform]"
+category = "帮助"
+command = "node"
+args = ["scripts/reader.mjs", "--doctor", "${@}"]
+
+[tasks.reader]
+description = "构建阅读器：reader [linux|windows|macos|web|android|ios]；省略为本机桌面"
+category = "构建"
+command = "node"
+args = ["scripts/reader.mjs", "${@}"]
+
+[tasks.build]
+description = "reader 的兼容别名，默认构建当前平台阅读器"
+category = "构建"
+alias = "reader"
+
+[tasks.dev]
+description = "启动阅读器开发版：dev [platform]；web 请使用静态 HTTP 服务"
+category = "开发"
+command = "node"
+args = ["scripts/reader.mjs", "--dev", "${@}"]
+
+
+[tasks.test-unit]
+description = "协议、平台路由与 Web 模块边界检查"
+category = "测试"
+command = "node"
+args = ["scripts/test.mjs", "unit", "${@}"]
+
+[tasks.test-rust]
+dependencies = ["build-web"]
+description = "原生宿主 Rust 测试"
+category = "测试"
+command = "cargo"
+args = ["test", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "${@}"]
+
+[tasks.test]
+description = "顺序执行基础检查和原生 Rust 测试"
+category = "测试"
+dependencies = ["test-unit", "test-rust"]
+
+
+
+[tasks.test-browser]
+description = "浏览器回归，需要静态 HTTP 与 Chrome；支持 --case"
+category = "测试"
+command = "node"
+args = ["scripts/test.mjs", "browser", "${@}"]
+
+[tasks.test-native]
+description = "原生 WebView 重开验证，传入 --binary、--book、--report"
+category = "测试"
+command = "node"
+args = ["scripts/python.mjs", "--cargo-make", "scripts/test_native_reader.py", "${@}"]
+
+[tasks.fixtures]
+description = "重建独立协议夹具，需要 rustc wasm target 和 CAF_TOOL"
+category = "开发"
+command = "node"
+args = ["scripts/python.mjs", "--cargo-make", "scripts/build_fixtures.py", "${@}"]
+
+[tasks.build-web]
+private = true
+command = "node"
+args = ["scripts/build_host.mjs"]

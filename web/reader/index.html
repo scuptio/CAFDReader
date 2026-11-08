@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CAFD 阅读器</title>
+  <link rel="stylesheet" href="reader.css" />
+</head>
+<body>
+  <header>
+    <a href="../">书架</a>
+    <span id="hostTitle">CAFD 阅读器</span>
+    <button id="btnOpen">打开 .cafd</button>
+    <button id="btnClose" disabled>关闭</button>
+    <input id="fileInput" type="file" accept=".cafd,.caf" hidden />
+    <details id="bookMetadata" hidden><summary>文档元信息</summary><dl id="bookMeta"></dl></details>
+  </header>
+  <main>
+    <aside id="exportPanel" hidden><span id="exportFilename"></span> <a id="exportSave">保存导出文件</a> <button id="exportCancel">取消导出</button></aside>
+    <p id="hostStatus" role="status">请打开 .cafd 文件。</p>
+    <div id="bookFrameSlot"></div>
+  </main>
+  <script type="module" src="reader.js"></script>
+</body>
+</html>

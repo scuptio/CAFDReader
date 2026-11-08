@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>藏书阁</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;padding:6vh 20px;background:#f4ecd8;color:#2b2620;font-family:serif;text-align:center}
+    h1{font-size:22px;font-weight:500;letter-spacing:.5em}#shelf{display:flex;flex-wrap:wrap;justify-content:center;gap:32px;margin:40px auto;max-width:1000px}
+    article{width:280px;padding:24px;background:#eadfc2;border:1px solid #c9b893;text-align:left}h2{font-size:20px;font-weight:500;line-height:1.8}p{font-size:13px;line-height:1.8;color:#6b5f4d}a{color:#9e3b2b}small{display:block;margin-top:18px;overflow-wrap:anywhere;color:#6b5f4d;font-size:11px}
+    .cover-link{display:flex;align-items:center;justify-content:center;height:260px;background:#fff;border:1px solid #c9b893;overflow:hidden}.book-cover{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}.cover-link:focus-visible{outline:2px solid #9e3b2b;outline-offset:4px}
+  </style>
+</head>
+<body>
+  <h1>藏书阁</h1>
+  <button id="btnImport" hidden>导入 .cafd</button>
+  <div id="shelf" aria-label="书架"></div>
+  <p id="shelfStatus" role="status">正在载入书架…</p>
+  <p><a href="reader/">打开本地 .cafd 档案</a></p>
+  <script type="module" src="shelf.js"></script>
+</body>
+</html>

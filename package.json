@@ -1,0 +1,32 @@
+{
+  "name": "cafd-reader",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "host:build": "node scripts/build_host.mjs",
+    "tauri": "node scripts/tauri.mjs",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "android:init": "tauri android init",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build",
+    "ios:init": "tauri ios init",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build",
+    "test:unit": "node scripts/test.mjs unit",
+    "test:browser": "node scripts/test.mjs browser",
+    "test:native": "node scripts/python.mjs scripts/test_native_reader.py",
+    "test": "npm run test:unit"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4",
+    "acorn": "8.19.0",
+    "esbuild": "0.28.2",
+    "eslint-scope": "9.1.2",
+    "playwright-core": "1.65.0"
+  }
+}

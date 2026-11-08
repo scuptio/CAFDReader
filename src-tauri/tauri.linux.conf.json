@@ -1,0 +1,17 @@
+{
+  "productName": "CAFD Reader",
+  "bundle": {
+    "targets": [
+      "deb"
+    ],
+    "category": "Education",
+    "linux": {
+      "deb": {
+        "desktopTemplate": "linux/reader.desktop",
+        "files": {
+          "/usr/share/mime/packages/cafd.xml": "linux/cafd.xml"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "仅主窗口可信宿主可管理本地书架和个人数据；不向书内 iframe 提供原生权限。",
+  "local": true,
+  "webviews": ["main"],
+  "permissions": [
+    "allow-library-list", "allow-library-import", "allow-library-commit", "allow-opened-files",
+    "allow-personal-get", "allow-personal-set", "allow-export-json", "allow-smoke-config", "allow-smoke-result"
+  ]
+}
