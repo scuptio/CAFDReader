@@ -1,0 +1,18 @@
+{
+  "java_major": 21,
+  "platform": "android-36",
+  "build_tools": "36.0.0",
+  "ndk": "28.2.13676358",
+  "rust_targets": ["aarch64-linux-android", "x86_64-linux-android"],
+  "command_line_tools": {
+    "revision": "15859902",
+    "linux": {
+      "url": "https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip",
+      "sha256": "4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583"
+    },
+    "win32": {
+      "url": "https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip",
+      "sha256": "90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a"
+    }
+  }
+}

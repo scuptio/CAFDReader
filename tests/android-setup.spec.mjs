@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {androidEnvironment} from '../scripts/android-env.mjs';
+const settings={schema_version:1,platform:'linux',env:{JAVA_HOME:'/jdk',ANDROID_HOME:'/sdk',ANDROID_SDK_ROOT:'/sdk',NDK_HOME:'/sdk/ndk'},path:['/jdk/bin','/sdk/platform-tools']};
+const base={PATH:'/usr/bin',JAVA_HOME:'/old-jdk',UNRELATED:'kept'};
+const configured=androidEnvironment(settings,base,'linux');
+assert.equal(configured.JAVA_HOME,'/jdk');assert.equal(configured.PATH,'/jdk/bin:/sdk/platform-tools:/usr/bin');
+assert.equal(configured.UNRELATED,'kept');assert.equal(base.JAVA_HOME,'/old-jdk');
+assert.throws(()=>androidEnvironment(settings,base,'win32'),/平台不匹配/);
+assert.throws(()=>androidEnvironment({...settings,env:{}},base,'linux'),/配置无效/);
+const windows=androidEnvironment({...settings,platform:'win32',path:['C:\\SDK tools\\bin']},{Path:'C:\\Windows'},'win32');
+assert.equal(windows.Path,'C:\\SDK tools\\bin;C:\\Windows');assert.ok(!('PATH' in windows));
+const result=spawnSync(process.execPath,[fileURLToPath(new URL('../scripts/python.mjs',import.meta.url)),'-m','unittest','discover','-s','tests','-p','test_android_setup.py'],{cwd:fileURLToPath(new URL('../',import.meta.url)),stdio:'inherit',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
+assert.ifError(result.error);assert.equal(result.status,0);
+console.log('PASS Android 环境隔离、安装失败传播、下载校验与跨平台计划');
