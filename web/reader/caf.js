@@ -5,10 +5,10 @@
 // read up front; payload bytes are fetched per 1 MiB chunk and Merkle-verified
 // before any byte reaches the component. Three loading modes:
 //
-//   1. URL on a Range-capable server + JSPI support: true on-demand reads
+//   1. URL on a Range-capable server + JSPI or worker XHR: on-demand reads
 //      (HTTP Range per chunk) — a 500 GB artifact opens after a few KB.
-//   2. URL without Range/JSPI: one whole-file GET, then in-memory lazy verify.
-//   3. ArrayBuffer / Uint8Array / Blob (file picker, drag-and-drop): in-memory.
+//   2. URL without Range: one whole-file GET, then in-memory lazy verify.
+//   3. Blob in a worker: sliced reads; ArrayBuffer / Uint8Array: in-memory.
 //
 // Security: every byte handed to the component is hash-verified before use;
 // component imports are enumerated and checked against the manifest's declared
@@ -189,6 +189,8 @@ class BufferSource {
     if (input instanceof Uint8Array) return new BufferSource(input);
     if (input instanceof ArrayBuffer) return new BufferSource(new Uint8Array(input));
     if (input && typeof input.arrayBuffer === "function") {
+      if(typeof input.slice==='function' && Number.isSafeInteger(input.size) &&
+         (jspiAvailable() || (workerSyncReads() && typeof FileReaderSync==='function')))return new BlobSource(input);
       return new BufferSource(new Uint8Array(await input.arrayBuffer()));
     }
     throw new Error("unsupported source type");
@@ -198,13 +200,30 @@ class BufferSource {
   readAtSync(off, len) { return this.bytes.slice(off, off + len); }
 }
 
+// FileReaderSync and synchronous Range XHR are confined to the dedicated worker.
+// They let core WASM use payload-fs on WebKit without retaining the whole document.
+function workerSyncReads() {
+  return typeof WorkerGlobalScope !== 'undefined' && typeof self !== 'undefined' && self instanceof WorkerGlobalScope;
+}
+class BlobSource {
+  constructor(blob) { this.blob=blob; this.rangeReads=0; this.bytesFetched=0; this.mode='blob-slices'; }
+  totalLen() { return this.blob.size; }
+  async readAt(off,len) { this.rangeReads++; this.bytesFetched+=len; return new Uint8Array(await this.blob.slice(off,off+len).arrayBuffer()); }
+  readAtSync(off,len) {
+    if(!workerSyncReads() || typeof FileReaderSync !== 'function')throw new Error('Synchronous Blob reads require a worker');
+    this.rangeReads++; this.bytesFetched+=len;
+    return new Uint8Array(new FileReaderSync().readAsArrayBuffer(this.blob.slice(off,off+len)));
+  }
+}
+
 class RangeSource {
   constructor(url, totalLen, head) {
     this.url = url;
     this.len = totalLen;
     this.rangeReads = 0;
     this.bytesFetched = 0;
-    this.chunkCache = new Map(); // absolute chunk start offset -> Uint8Array
+    this.mode = jspiAvailable() ? "http-range-jspi" : "http-range-worker";
+    this.chunkCache = new Map(); // bounded, at most 16 MiB
     this.prefetched = new Map([[0, head]]); // boot head already fetched
   }
   totalLen() { return this.len; }
@@ -223,17 +242,43 @@ class RangeSource {
     for (let cs = start; cs < end; cs += CHUNK_SIZE) {
       if (!this.chunkCache.has(cs)) {
         const ce = Math.min(cs + CHUNK_SIZE, this.len);
-        this.chunkCache.set(cs, await this.#fetch(cs, ce - 1));
+        this.#remember(cs, await this.#fetch(cs, ce - 1));
       }
     }
     const parts = [];
     for (let cs = start; cs < end; cs += CHUNK_SIZE) {
-      const chunk = this.chunkCache.get(cs);
+      const chunk = this.#touch(cs);
       const from = Math.max(off - cs, 0);
       const to = Math.min(off + len - cs, chunk.length);
       if (to > from) parts.push(chunk.slice(from, to));
     }
     return concatBytes(parts);
+  }
+  #touch(key) { const value=this.chunkCache.get(key); this.chunkCache.delete(key); this.chunkCache.set(key,value); return value; }
+  #remember(key,value) {
+    this.chunkCache.delete(key); this.chunkCache.set(key,value);
+    while(this.chunkCache.size>16)this.chunkCache.delete(this.chunkCache.keys().next().value);
+  }
+  readAtSync(off,len) {
+    if(!workerSyncReads() || typeof XMLHttpRequest!=='function')throw new Error('Synchronous Range reads require a worker');
+    if(!len)return new Uint8Array(0);
+    const prefetched=this.prefetched.get(off);
+    if(prefetched && prefetched.length>=len)return prefetched.slice(0,len);
+    const start=Math.floor(off/CHUNK_SIZE)*CHUNK_SIZE,end=Math.min(this.len,Math.ceil((off+len)/CHUNK_SIZE)*CHUNK_SIZE);
+    if(end-start>4*CHUNK_SIZE)return this.#fetchSync(off,off+len-1);
+    const parts=[];
+    for(let cs=start;cs<end;cs+=CHUNK_SIZE) {
+      if(!this.chunkCache.has(cs))this.#remember(cs,this.#fetchSync(cs,Math.min(cs+CHUNK_SIZE,this.len)-1));
+      const chunk=this.#touch(cs);parts.push(chunk.subarray(Math.max(0,off-cs),Math.min(chunk.length,off+len-cs)));
+    }
+    return concatBytes(parts);
+  }
+  #fetchSync(from,to) {
+    const xhr=new XMLHttpRequest();xhr.open('GET',this.url,false);xhr.responseType='arraybuffer';
+    xhr.setRequestHeader('Range',`bytes=${from}-${to}`);xhr.send();
+    if(xhr.status!==206)throw new Error(`range fetch failed: HTTP ${xhr.status}`);
+    const bytes=new Uint8Array(xhr.response);if(bytes.length!==to-from+1)throw new Error('Invalid Range response length');
+    this.rangeReads++;this.bytesFetched+=bytes.length;return bytes;
   }
   async #fetch(from, to) {
     this.rangeReads++;
@@ -338,7 +383,7 @@ function computeRootHash(manifestHashHex, interfaceHashHex, wasmHashesHex, paylo
 export class Artifact {
   #source;
   #files = new Map(); // path -> { offset, length, node }
-  #verifiedChunks = new Set(); // absolute chunk start offsets already verified
+  #verifiedChunks = new Map(); // verified bytes retained under a 16 MiB bound
 
   constructor(source, header, manifest, directory, components, signature) {
     this.#source = source;
@@ -364,7 +409,7 @@ export class Artifact {
   payloadFiles() { return [...this.#files.keys()]; }
   fileLength(path) { const m = this.#files.get(path); return m ? m.length : null; }
   get totalSize() { return this.#source.totalLen(); }
-  stats() { return { rangeReads: this.#source.rangeReads ?? 0, bytesFetched: this.#source.bytesFetched ?? this.#source.totalLen() }; }
+  stats() { return { mode:this.#source.mode || 'memory-buffer', rangeReads:this.#source.rangeReads ?? 0, bytesFetched:this.#source.bytesFetched ?? this.#source.totalLen(), cachedBytes:(this.#source.chunkCache ? [...this.#source.chunkCache.values()].reduce((n,b)=>n+b.length,0) : this.#source.bytes?.byteLength || 0)+[...this.#verifiedChunks.values()].reduce((n,r)=>n+r.bytes.length,0) }; }
 
   async readPayload(path) {
     const meta = this.#files.get(path);
@@ -422,12 +467,14 @@ export class Artifact {
   }
 
   async #fetchVerified(absOff, len, expectedHash) {
+    const cached=this.#verifiedCached(absOff,expectedHash);if(cached)return cached;
     const data = await this.#source.readAt(absOff, len);
     this.#verifyChunk(absOff, data, expectedHash);
     return data;
   }
 
   #fetchVerifiedSync(absOff, len, expectedHash) {
+    const cached=this.#verifiedCached(absOff,expectedHash);if(cached)return cached;
     if (typeof this.#source.readAtSync !== "function") {
       throw new Error("source does not support synchronous reads");
     }
@@ -436,12 +483,17 @@ export class Artifact {
     return data;
   }
 
+  #verifiedCached(absOff,hash) {
+    const record=this.#verifiedChunks.get(absOff);
+    if(!record || record.hash!==hash)return null;
+    this.#verifiedChunks.delete(absOff);this.#verifiedChunks.set(absOff,record);return record.bytes;
+  }
   #verifyChunk(absOff, data, expectedHash) {
-    if (this.#verifiedChunks.has(absOff)) return;
     if (sha256Hex(data) !== expectedHash) {
       throw new Error(`payload chunk at offset ${absOff} hash mismatch`);
     }
-    this.#verifiedChunks.add(absOff);
+    this.#verifiedChunks.set(absOff,{hash:expectedHash,bytes:data});
+    while(this.#verifiedChunks.size>16)this.#verifiedChunks.delete(this.#verifiedChunks.keys().next().value);
   }
 
   async instantiate(component) {
@@ -504,7 +556,7 @@ class ComponentHandle {
     const impl = {
       open: (pathPtr, pathLen) => {
         const path = readGuestStr(pathPtr, pathLen);
-        if (!visible(path) || !artifact.payloadFiles().includes(path)) return -1;
+        if (!visible(path) || artifact.fileLength(path) === null) return -1;
         let fd = 1;
         while (fds.has(fd)) fd++;
         fds.set(fd, { path, pos: 0 });
@@ -788,7 +840,7 @@ async function openUrl(url) {
   if (probe.status === 206) {
     const total = respContentRangeTotal(probe);
     const head = new Uint8Array(await probe.arrayBuffer());
-    if (total !== null && jspiAvailable()) {
+    if (total !== null && (jspiAvailable() || (workerSyncReads() && typeof XMLHttpRequest==='function'))) {
       const src = new RangeSource(url, total, head);
       src.bytesFetched += head.length;
       return src;

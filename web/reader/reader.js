@@ -97,7 +97,7 @@ window.addEventListener('message',async event=>{
     const isolated=await platform.get('0'.repeat(64),'native-smoke')===null;
     const response=await fetch(session.input,{headers:{Range:'bytes=0-3'}}),head=new Uint8Array(await response.arrayBuffer());
     const range=response.status===206 && head.length===4 && head[0]===67&&head[1]===65&&head[2]===70&&head[3]===0;
-    await platform.report({...event.data.result,ok:event.data.result.ok&&persisted&&isolated&&range,rootHash:root,title:session.info.title,wasm:true,embeddedApp:true,persisted,isolated,range,previousStarts,sandbox:session.frame.getAttribute('sandbox')});
+    await platform.report({...event.data.result,runtimeStats:await session.runtime.stats(),ok:event.data.result.ok&&persisted&&isolated&&range,rootHash:root,title:session.info.title,wasm:true,embeddedApp:true,persisted,isolated,range,previousStarts,sandbox:session.frame.getAttribute('sandbox')});
   }catch(error){await platform.report({ok:false,error:error.message});}
 });
 
