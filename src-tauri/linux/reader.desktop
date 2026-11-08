@@ -1,0 +1,11 @@
+[Desktop Entry]
+Categories={{categories}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}} %U
+Icon={{icon}}
+Name=CAFD 阅读器
+Terminal=false
+Type=Application
+MimeType=application/x-cafd;

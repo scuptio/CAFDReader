@@ -1,0 +1,25 @@
+<!doctype html><html lang="zh-Hans"><head><meta charset="utf-8"><style>body{font:18px sans-serif;padding:24px}pre{white-space:pre-wrap}</style></head><body><h1 data-caf-ready>独立 CAFD 交互文档</h1><p>此夹具不含古籍或其他内容项目的数据。</p><pre id="fixture-result">正在连接…</pre><script>
+addEventListener('message',async event=>{
+ if(event.source!==parent||event.data?.type!=='caf-app-connect')return;
+ const port=event.ports[0],pending=new Map();let next=0;
+ port.onmessage=({data})=>{pending.get(data.id)?.(data);pending.delete(data.id);};port.start();
+ const rpc=(op,params={})=>new Promise(resolve=>{const id=++next;pending.set(id,resolve);port.postMessage({id,op,...params});});
+ const result={};
+ try{parent.document.body;result.parent='allowed';}catch{result.parent='denied';}
+ try{localStorage.getItem('x');result.storage='allowed';}catch{result.storage='denied';}
+ try{await fetch('https://example.invalid/');result.network='allowed';}catch{result.network='denied';}
+ result.previous=await rpc('storage:get',{key:'fixture-value'});
+ result.write=await rpc('storage:set',{key:'fixture-value',value:{value:42}});
+ result.read=await rpc('storage:get',{key:'fixture-value'});
+ result.other=await rpc('storage:get',{key:'different'});
+ result.badKey=await rpc('storage:get',{key:'../outside'});
+ result.method=await rpc('call',{method:'get',args:['anything']});
+ result.traversal=await rpc('read',{path:'/../meta.json'});
+ result.missing=await rpc('read',{path:'/missing'});
+ result.large=await rpc('storage:set',{key:'large',value:'x'.repeat(4097)});
+ result.unknown=await rpc('open',{path:'/meta.json'});
+ result.info=await rpc('call',{method:'info',args:[]});
+ const bytes=await rpc('read',{path:'/meta.json'});result.self=bytes.ok&&bytes.value instanceof ArrayBuffer;
+ document.querySelector('#fixture-result').textContent=JSON.stringify(result);
+});parent.postMessage({type:'caf-app-ready',protocol:'cf:ebook-web@1'},'*');
+</script></body></html>
