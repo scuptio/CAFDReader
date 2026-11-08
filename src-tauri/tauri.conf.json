@@ -11,7 +11,7 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: cafcover: http://cafcover.localhost; font-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost cafbook: http://cafbook.localhost; worker-src 'self'; frame-src 'self' about:; object-src 'none'; base-uri 'self'",
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: cafcover: http://cafcover.localhost; font-src 'self' blob:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost cafbook: http://cafbook.localhost; worker-src 'self'; frame-src 'self' about:; object-src 'none'; base-uri 'self'",
       "capabilities": [
         "main"
       ],
@@ -37,6 +37,7 @@
           "cafd"
         ],
         "name": "CAFD 交互文档",
+        "description": "CAFD 交互文档",
         "mimeType": "application/x-cafd",
         "role": "Viewer",
         "rank": "Alternate",
