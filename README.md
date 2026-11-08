@@ -58,4 +58,10 @@ cargo make fixtures -- --caf-tool /path/to/caf-tool
 
 `cargo make reader web` 生成确定性的 dist-host/release.json（软件/规范版本及文件哈希）。部署到内容站点时使用固定清单及校验后的产物，覆盖站点宿主文件，保留其 books/catalog.json 与内容文件。安装包不包含作品。
 
-规范与阅读器版本独立维护；目前程序为 0.2.0，规范为 1.0.0。工作流仅手动构建，不自动发布。构建与测试不依赖外部内容仓库。
+规范与阅读器版本独立维护；目前程序为 0.2.1，规范为 1.0.0。工作流仅手动构建，不自动发布。构建与测试不依赖外部内容仓库。
+
+## 大文档读取
+
+0.2.1 在无 JSPI 的 Linux WebKit 中使用专用 Worker 的同步 Range XHR，避免把整个文档转成 ArrayBuffer。本地 File/Blob 在 Worker 中按需切片；原始块和已校验块缓存各限 16 MiB，淘汰后读取重新验证哈希。同步 I/O 不在主线程或文档 iframe 执行。静态 HTTP 服务器需要支持 Range 才能使用网络按需读取。
+
+原生验收为每次启动隔离浏览器缓存和 D-Bus，保留同一个临时原生书架验证记录恢复；支持 `--max-read-bytes`、`--max-cache-bytes` 检查实际读取量。书内可用 `data-caf-ready="false"` 表示仍在初始化，完成后设为 true，验收不会只凭封面提前退出。
