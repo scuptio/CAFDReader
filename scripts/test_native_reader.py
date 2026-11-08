@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """实际运行原生 WebView 两次，核对开卷、权限边界与跨进程保存。"""
-import argparse,json,os,subprocess,tempfile
+import argparse,json,os,shutil,subprocess,sys,tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -17,7 +17,12 @@ def main():
         for run in range(2):
             report=root/f'run-{run}.json'
             env=os.environ|{'CAF_SMOKE_OUTPUT':str(report),'CAF_SMOKE_DATA':str(root/'library')}
-            result=subprocess.run([str(args.binary.resolve()),'--smoke',str(args.book.resolve())],env=env,capture_output=True,text=True,timeout=90)
+            if os.name=='posix':
+                for key,folder in [('XDG_CACHE_HOME','browser-cache'),('XDG_CONFIG_HOME','browser-config'),('XDG_DATA_HOME','browser-data')]:
+                    directory=root/f'{folder}-{run}';directory.mkdir(exist_ok=True);env[key]=str(directory)
+            command=[str(args.binary.resolve()),'--smoke',str(args.book.resolve())]
+            if sys.platform.startswith('linux') and shutil.which('dbus-run-session'):command=['dbus-run-session','--',*command]
+            result=subprocess.run(command,env=env,capture_output=True,text=True,timeout=90)
             assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
             assert report.is_file(),('原生进程未生成验收报告',result.returncode,result.stdout,result.stderr)
             data=json.loads(report.read_text());value=data['result']
@@ -28,6 +33,8 @@ def main():
             assert value['previousStarts']==run,data
             assert value['sandbox']=='allow-scripts',data
             reports.append(data)
+            if args.report:args.report.with_name(args.report.stem+f'-run-{run+1}.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+            print('运行时读取统计：'+json.dumps(value.get('runtimeStats',{}),ensure_ascii=False),flush=True)
             print(f'PASS 原生启动 {run+1}：{data["platform"]} / WebView {data["webview"]}，书页、字体、WASM、Range、隔离与持久保存',flush=True)
         assert reports[0]['result']['rootHash']==reports[1]['result']['rootHash']
     if args.report:args.report.write_text(json.dumps(dict(status='passed',runs=reports),ensure_ascii=False,indent=2)+'\n')
