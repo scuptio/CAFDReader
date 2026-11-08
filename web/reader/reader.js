@@ -7,7 +7,7 @@ const decoder=new TextDecoder();
 let active=null;
 let sequence=0;
 
-function closeBook(message='请从书架选书，或打开本地 .cafd 文档（兼容旧 .caf）。') {
+function closeBook(message='请从书架选书，或打开本地 .cafd 文档。') {
   sequence++;platform.cancelPending();
   clearExport();
   const session=active;active=null;
@@ -21,7 +21,7 @@ function closeBook(message='请从书架选书，或打开本地 .cafd 文档（
 
 function showMetadata(info,artifact) {
   const box=$('bookMeta');box.replaceChildren();
-  for(const [name,value] of [['标题',info.title || artifact.name],['作者',info.author],['版本',artifact.version],['状态',info.quality==='editorial-preview' ? '审校预览' : info.quality],['说明',info.note],['根杂凑',artifact.rootHash]]) {
+  for(const [name,value] of [['标题',info.title || artifact.name],['作者',info.author],['版本',artifact.version],['状态',info.quality==='editorial-preview' ? '审校预览' : info.quality],['说明',info.note],['SHA-256',artifact.rootHash]]) {
     if(value===undefined)continue;
     const term=document.createElement('dt');term.textContent=name;
     const definition=document.createElement('dd');definition.textContent=String(value);

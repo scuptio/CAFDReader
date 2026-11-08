@@ -38,12 +38,17 @@ pub(crate) fn library_list(state: tauri::State<Native>, token: String) -> Result
     locked(&state)?.list()
 }
 #[tauri::command]
+pub(crate) fn library_remove(state: tauri::State<Native>, token: String, id: String) -> Result<()> {
+    authorize(&state, &token)?;
+    locked(&state)?.remove_from_shelf(&id)
+}
+#[tauri::command]
 pub(crate) async fn library_import(app: tauri::AppHandle, token: String) -> Result<Option<Book>> {
     authorize(app.state::<Native>().inner(), &token)?;
     let (tx, rx) = tokio::sync::oneshot::channel();
     app.dialog()
         .file()
-        .add_filter("CAFD 文档（兼容旧 CAF）", &["cafd", "caf"])
+        .add_filter("CAFD 文档", &["cafd", "caf"])
         .pick_file(move |path| {
             let _ = tx.send(path);
         });
