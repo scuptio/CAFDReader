@@ -1,8 +1,8 @@
-package cf:ebook@0.1.0;
+package caf:doc@1.0.0;
 
 /// 电子书能力：目录、取篇、翻页窗口、书内检索。
 /// 所有复合值经 caf-abi 打包返回（本 profile 采用 UTF-8 JSON 编码）。
-interface ebook {
+interface doc {
   /// 书目信息：{ title, author, note, volumes, segments, quality }
   info: func() -> string;
 
@@ -23,5 +23,5 @@ interface ebook {
 }
 
 world ebook-reader {
-  export ebook;
+  export doc;
 }

@@ -3,8 +3,9 @@ import {readFile} from 'node:fs/promises';
 import {resourcePath,appManifest,callArguments,storageKey,storageValue,documentManifest,APP_PROTOCOL,DOCUMENT_CAPABILITY} from '../web/reader/app-protocol.js';
 const version=JSON.parse(await readFile(new URL('../spec/version.json',import.meta.url)));
 assert.equal(APP_PROTOCOL,version.application_protocol);assert.equal(DOCUMENT_CAPABILITY,version.capability);
+assert.equal(APP_PROTOCOL,'caf:doc-web@1');assert.equal(DOCUMENT_CAPABILITY,'caf:doc@1');
 const files={'/app/index.html':100,'/meta.json':200,'/large':40*1024*1024};
-const manifest=appManifest({protocol:'cf:ebook-web@1',component:'ebook',entry:'/app/index.html',methods:['info','get']},files);
+const manifest=appManifest({protocol:'caf:doc-web@1',component:'ebook',entry:'/app/index.html',methods:['info','get']},files);
 const documentFiles={...files,'/app/manifest.json':200};
 const runtime={artifact:{files:documentFiles},readPayload:async()=>new TextEncoder().encode(JSON.stringify(manifest)).buffer};
 assert.deepEqual(await documentManifest(runtime,{web_app_manifest:'/app/manifest.json'}),manifest);
@@ -15,6 +16,7 @@ await assert.rejects(documentManifest({...runtime,readPayload:async()=>new TextE
 assert.equal(resourcePath('/meta.json',files),'/meta.json');
 for(const path of ['/../meta.json','/app/../../meta.json','/missing','/large','file:///etc/passwd','/app\\index.html','/meta.json\0']) assert.throws(()=>resourcePath(path,files));
 assert.throws(()=>appManifest({...manifest,protocol:'future'},files));
+assert.throws(()=>appManifest({...manifest,protocol:'cf:ebook-web@1'},files),/Unsupported/);
 assert.throws(()=>callArguments('alloc',[100],manifest));
 assert.throws(()=>callArguments('get',[{}],manifest));
 assert.throws(()=>callArguments('get',['a'.repeat(70000)],manifest));

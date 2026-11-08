@@ -43,8 +43,8 @@ cargo make fixtures -- --caf-tool /path/to/caf-tool
 - [CAFD 1.0.0](spec/CAFD.md)
 - [应用桥接协议](spec/ebook-web-v1.md)
 - [实现兼容](docs/compatibility.md)
-- [迁移来源](docs/provenance.md)
+- [CAF 浏览器运行时](docs/runtime.md)
 
 `cargo make reader web` 生成确定性的 dist-host/release.json（软件/规范版本及文件哈希）。部署到内容站点时使用固定清单及校验后的产物，覆盖站点宿主文件，保留其 books/catalog.json 与内容文件。安装包不包含作品。
 
-规范与阅读器版本独立维护；目前程序为 0.2.0，规范为 1.0.0。工作流仅手动构建，不自动发布。此仓库已从内容项目分离；来源中提到的路径仅为历史记录，不是构建依赖。
+规范与阅读器版本独立维护；目前程序为 0.2.0，规范为 1.0.0。工作流仅手动构建，不自动发布。构建与测试不依赖外部内容仓库。

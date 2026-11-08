@@ -17,6 +17,7 @@ def main():
             env=os.environ|{'CAF_SMOKE_OUTPUT':str(report),'CAF_SMOKE_DATA':str(root/'library')}
             result=subprocess.run([str(args.binary.resolve()),'--smoke',str(args.book.resolve())],env=env,capture_output=True,text=True,timeout=90)
             assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
+            assert report.is_file(),('原生进程未生成验收报告',result.returncode,result.stdout,result.stderr)
             data=json.loads(report.read_text());value=data['result']
             for key in ['ok','wasm','embeddedApp','fontsReady','visible','persisted','isolated','range','parentBlocked','networkBlocked','nativeDenied','tokenAbsent']:
                 assert value[key] is True,(key,data)

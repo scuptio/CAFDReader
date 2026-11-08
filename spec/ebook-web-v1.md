@@ -1,11 +1,11 @@
-# cf:ebook-web@1
+# caf:doc-web@1
 
-规范版本 1.0.0。当前阅读文档 profile 为 cf:ebook@1；WASM 数据接口由文档提供，宿主不解释排版或篇章。
+规范版本 1.0.0。当前阅读文档 profile 为 caf:doc@1；WASM 数据接口由文档提供，宿主不解释排版或篇章。
 
 发现与挂载
   info() 返回 JSON 元信息，web_app_manifest 字段指向 /app/manifest.json。
   清单结构：
-    {"protocol":"cf:ebook-web@1","component":"ebook","entry":"/app/index.html",
+    {"protocol":"caf:doc-web@1","component":"ebook","entry":"/app/index.html",
      "methods":["info","toc","get","window","search","lookup","entity"],"sources":{...}}
   v1 HTML 入口自包含脚本与样式，不引用远端脚本、外部样式或嵌套框架。
   宿主经 CAF Worker 校验后读取元信息、清单和 HTML；未知协议或不合法路径拒绝挂载。
@@ -13,7 +13,7 @@
 
 启动握手
   1. 宿主创建 sandbox="allow-scripts" 的 iframe，注入受宿主管理的 CSP 与脚本 nonce。
-  2. 书内发送 {type:"caf-app-ready",protocol:"cf:ebook-web@1"} 给 parent。
+  2. 书内发送 {type:"caf-app-ready",protocol:"caf:doc-web@1"} 给 parent。
   3. 宿主只接受当前 iframe 的一次握手，传入私有 MessagePort、info 和完整 rootHash。
   4. 书内客户端在端口上发送 {id,op,...}，接收 {id,ok,value} 或 {id,ok:false,error}。
   不以 null origin 字符串作信任依据；校验 event.source 与实际当前 frame 对象。

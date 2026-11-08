@@ -1,6 +1,6 @@
-// 通用 cf:ebook-web@1 契约；不含篇章、分页或排版逻辑。
-export const APP_PROTOCOL='cf:ebook-web@1';
-export const DOCUMENT_CAPABILITY='cf:ebook@1';
+// 通用 caf:doc-web@1 契约；不含篇章、分页或排版逻辑。
+export const APP_PROTOCOL='caf:doc-web@1';
+export const DOCUMENT_CAPABILITY='caf:doc@1';
 export async function documentManifest(runtime,info){
   if(!info||typeof info!=='object'||Array.isArray(info)||info.error)throw new Error(info?.error||'文档元信息无效');
   if(!info.web_app_manifest)return null;

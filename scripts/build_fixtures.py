@@ -18,10 +18,10 @@ def main():
             meta=dict(title='交互文档验证',author='CAFD Reader',note='<img id="metadata-injection">')
             if kind!='legacy':meta['web_app_manifest']='/app/manifest.json'
             (payload/'meta.json').write_text(json.dumps(meta,ensure_ascii=False,sort_keys=True),encoding='utf-8')
-            (payload/'app/manifest.json').write_text(json.dumps(dict(protocol='future' if kind=='future' else 'cf:ebook-web@1',component='ebook',entry='/app/index.html',methods=['info']),sort_keys=True),encoding='utf-8')
+            (payload/'app/manifest.json').write_text(json.dumps(dict(protocol='future' if kind=='future' else 'caf:doc-web@1',component='ebook',entry='/app/index.html',methods=['info']),sort_keys=True),encoding='utf-8')
             shutil.copyfile(out/'app.html',payload/'app/index.html');shutil.copyfile(wasm,root/'fixture.wasm')
-            config='name = "CAFD 协议夹具"\nversion = "1.0.0"\n[payload]\nroot = "payload"\n'
-            if kind!='unsupported':config+='[[components]]\nname = "ebook"\nworld = "ebook-reader"\npath = "fixture.wasm"\ncapabilities = ["cf:ebook@1"]\naccess = ["/"]\n'
+            config='name = "CAFD 协议夹具"\nversion = "1.0.0"\ninterfaces = ['+json.dumps(str(ROOT/'spec/ebook.wit'))+']\n[payload]\nroot = "payload"\n'
+            if kind!='unsupported':config+='[[components]]\nname = "ebook"\nworld = "ebook-reader"\npath = "fixture.wasm"\ncapabilities = ["caf:doc@1"]\naccess = ["/"]\n'
             (root/'build.toml').write_text(config,encoding='utf-8')
             target=out/(kind+('.caf' if kind=='legacy' else '.cafd'))
             subprocess.run([tool,'build','-c',str(root/'build.toml'),'-o',str(target)],check=True,stdout=subprocess.DEVNULL)
