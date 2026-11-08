@@ -70,7 +70,7 @@ def main():
     for line in wrap('别名：' + '；'.join(aliases), columns):
         print(paint(line, '2'))
     print('\n' + paint('常用命令', '1'))
-    for command in ['cargo make reader [platform]', 'cargo make reader android --plan', 'cargo make doctor [platform]', 'cargo make test']:
+    for command in ['cargo make reader [platform]', 'cargo make setup-android -- --plan', 'cargo make reader android --plan', 'cargo make doctor [platform]', 'cargo make test']:
         for line in wrap(command, columns - 2):
             print('  ' + paint(line, '36'))
     print()
