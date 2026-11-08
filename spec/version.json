@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
   "container": "CAF v1",
-  "capability": "cf:ebook@1",
-  "application_protocol": "cf:ebook-web@1"
+  "capability": "caf:doc@1",
+  "application_protocol": "caf:doc-web@1"
 }

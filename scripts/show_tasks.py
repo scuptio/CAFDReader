@@ -1,4 +1,4 @@
-"""参照 mududb_p，从 Makefile.toml 动态显示项目任务，不列出内置钩子。"""
+"""从 Makefile.toml 动态显示项目任务，不列出内置钩子。"""
 import os
 import re
 import shutil

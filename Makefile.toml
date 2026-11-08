@@ -1,4 +1,4 @@
-# 参考 ../mududb_p：根任务只编排，构建逻辑仍在现有脚本与 Tauri 中。
+# 根任务只编排，构建逻辑位于项目脚本与 Tauri 中。
 [config]
 skip_core_tasks = true
 skip_git_env_info = true
