@@ -21,6 +21,17 @@ cargo make dev
 
 支持 linux/windows/macos/web/android/ios，桌面实际构建要求宿主系统匹配。移动端首次初始化生成工程。桌面默认未签名验证包、Android 调试 APK、iOS 本机架构模拟器。安装包在 src-tauri/target/release/bundle/，手机产物在 src-tauri/gen/。
 
+Ubuntu / Windows x64 可一键安装配置 Android 专用工具链（需先具备上述 Node.js、Python、Rust 和 cargo-make）：
+
+```bash
+cargo make setup-android -- --plan  # 只看计划
+cargo make setup-android           # 安装依赖并交互接受 SDK 许可证
+cargo make doctor android
+cargo make reader android
+```
+
+无人值守安装加 `-- --yes`；安装路径会保存为本项目配置，后续 Android 构建自动加载。支持自定义 SDK 目录、复用 CI 工具链，详见 [Android 环境安装与构建](docs/android-build.md)。
+
 ## 独立验证
 
 ```bash

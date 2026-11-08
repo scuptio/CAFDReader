@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 import {spawnSync} from 'node:child_process';
 import {paint,heading,status,commandLine,duration} from './terminal.mjs';
+import {loadAndroidEnvironment} from './android-env.mjs';
 
 export const root=fileURLToPath(new URL('../',import.meta.url));
 const require=createRequire(import.meta.url);
@@ -110,6 +111,7 @@ export function main(argv=process.argv.slice(2)){
   const options=parseOptions(argv);
   if(options.help){console.log(usage);return;}
   if(options.json&&!options.plan)throw Error('--json 须与 --plan 一起使用。');
+  if(options.platform==='android'&&!options.plan)loadAndroidEnvironment(root);
   if(options.doctor){
     if(options.extra.length||options.dev||options.plan)throw Error('doctor 只接受一个可选平台名。');
     buildPlan({...options,extra:[]});
