@@ -20,6 +20,12 @@ category = "帮助"
 command = "node"
 args = ["scripts/reader.mjs", "--doctor", "${@}"]
 
+[tasks.setup-android]
+description = "安装配置 Android 环境（Ubuntu/Windows x64）；--plan 预览，--yes 接受 SDK 许可证"
+category = "开发"
+command = "node"
+args = ["scripts/python.mjs", "--cargo-make", "scripts/setup_android.py", "${@}"]
+
 [tasks.reader]
 description = "构建阅读器：reader [linux|windows|macos|web|android|ios]；省略为本机桌面"
 category = "构建"
