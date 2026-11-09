@@ -89,6 +89,8 @@ window.addEventListener('message',connectFrame);
 window.addEventListener('message',async event=>{
   const session=active;
   if(!session?.frame || event.source!==session.frame.contentWindow || event.data?.type!=='caf-native-probe' || !await platform.smoke())return;
+  if(active!==session || session.probeReported)return;
+  session.probeReported=true;
   try{
     const root=session.runtime.artifact.rootHash;
     const previousStarts=(await platform.get(root,'native-smoke'))?.starts||0;
