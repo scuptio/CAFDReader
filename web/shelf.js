@@ -16,7 +16,9 @@ try {
     const status=document.createElement('p');status.textContent=book.quality==='editorial-preview' ? '审校预览' : book.quality || '';
     const download=document.createElement('a');download.textContent='下载 CAFD';download.href='books/'+encodeURIComponent(book.file);download.download=book.file;
     const hash=document.createElement('small');hash.textContent='SHA-256 '+book.sha256;
-    article.append(heading,author,status,...(platform.native?[]:[download]),hash);shelf.appendChild(article);
+    const remove=document.createElement('button');remove.type='button';remove.className='remove-book';remove.textContent='从书架移除';remove.title='仅从首页显示移除，不删除文件';remove.setAttribute('aria-label','从书架移除《'+book.title+'》');
+    remove.onclick=async()=>{remove.disabled=true;try{await platform.removeBook(book);article.remove();document.getElementById('shelfStatus').textContent=(shelf.children.length?'':'书架暂无书籍。')+'已从书架移除，文件仍保留在原位置。';}catch(error){remove.disabled=false;document.getElementById('shelfStatus').textContent='移除失败：'+error.message;}};
+    article.append(heading,author,status,...(platform.native?[]:[download]),remove,hash);shelf.appendChild(article);
   }
   document.getElementById('shelfStatus').textContent=shelf.children.length ? 'CAFD 交互文档，内含内容、资源与阅读应用。' : '书架暂无书籍，可打开本地 CAFD 文档。';
 } catch(error) {document.getElementById('shelfStatus').textContent=error.message;}

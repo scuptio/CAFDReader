@@ -21,6 +21,7 @@ export async function createNativePlatform(){
     native:true,
     cancelPending(){for(const opening of validations)opening.terminate();validations.clear();},
     async listBooks(){return (await call('library_list')).map(b=>({...b,sha256:b.id,href:'reader/index.html?'+new URLSearchParams({library:b.id}),coverURL:b.cover?sourceURL(b.id,'cafcover'):null}));},
+    async removeBook(book){return call('library_remove',{id:book.id});},
     source(id){if(!/^[a-f0-9]{64}$/.test(id))throw new Error('本地书籍标识无效');return sourceURL(id);},
     async importBook(){const staged=await call('library_import');return staged?register(staged):null;},
     async consumeOpened(){if(registering)return registering;registering=(async()=>{const books=[];for(;;){const pending=await call('opened_files');if(!pending.length)break;for(const book of pending)books.push(await register(book));}return books;})();try{return await registering;}finally{registering=null;}},
