@@ -55,7 +55,7 @@ pub fn run() {
     let builder=builder.plugin(tauri_plugin_fs::init()).plugin(tauri_plugin_dialog::init())
         .register_uri_scheme_protocol("cafbook",|ctx,request|crate::protocol::response(ctx.app_handle(),request,false))
         .register_uri_scheme_protocol("cafcover",|ctx,request|crate::protocol::response(ctx.app_handle(),request,true))
-        .invoke_handler(tauri::generate_handler![commands::library_list,commands::library_import,commands::library_commit,commands::opened_files,commands::personal_get,commands::personal_set,commands::export_json,commands::smoke_config,commands::smoke_result])
+        .invoke_handler(tauri::generate_handler![commands::library_list,commands::library_remove,commands::library_import,commands::library_commit,commands::opened_files,commands::personal_get,commands::personal_set,commands::export_json,commands::smoke_config,commands::smoke_result])
         .setup(|app|{
             #[cfg(desktop)]
             let (mut pending,mut smoke,mut data)=(Vec::new(),None,None);

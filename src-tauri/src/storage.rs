@@ -192,6 +192,14 @@ impl Store {
         )?;
         Ok(book)
     }
+    pub fn remove_from_shelf(&self, id: &str) -> Result<()> {
+        // 仅移除首页索引；保留容器、封面、个人记录及用户选择的原始文件。
+        match fs::remove_file(self.metadata_path(id)?) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(error.to_string()),
+        }
+    }
     pub fn list(&self) -> Result<Vec<Book>> {
         let mut books = Vec::new();
         for entry in fs::read_dir(self.root.join("metadata")).map_err(|e| e.to_string())? {
@@ -336,6 +344,41 @@ mod tests {
         s.commit(a, None).unwrap();
         assert_eq!(s.list().unwrap().len(), 1);
         assert!(s.import(&b"not a CAF"[..], "坏.cafd").is_err());
+        fs::remove_dir_all(s.root).unwrap();
+    }
+    #[test]
+    fn shelf_removal_preserves_files_records_and_allows_reimport() {
+        let s = store();
+        let mut data = vec![0; 200];
+        data[..4].copy_from_slice(b"CAF\0");
+        let source = s.root.join("原始文档.cafd");
+        fs::write(&source, &data).unwrap();
+        let mut book = s.import(File::open(&source).unwrap(), "文档.cafd").unwrap();
+        book.title = "文档".into();
+        book.root_hash = "a".repeat(64);
+        let cover = vec![255, 216, 255, 217];
+        book = s.commit(book, Some(cover.clone())).unwrap();
+        s.personal_set(&book.root_hash, "progress", serde_json::json!({"page":7})).unwrap();
+        data[100] = 1;
+        let mut other = s.import(&data[..], "另一文档.cafd").unwrap();
+        other.title = "另一文档".into();
+        other.root_hash = "b".repeat(64);
+        s.commit(other.clone(), None).unwrap();
+        s.remove_from_shelf(&book.id).unwrap();
+        s.remove_from_shelf(&book.id).unwrap();
+        assert!(s.remove_from_shelf("../outside").is_err());
+        let reopened = Store::new(s.root.clone()).unwrap();
+        let visible = reopened.list().unwrap();
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0].id, other.id);
+        assert_eq!(fs::read(reopened.book_path(&book.id).unwrap()).unwrap(), fs::read(&source).unwrap());
+        assert_eq!(fs::read(reopened.cover_path(&book.id).unwrap()).unwrap(), cover);
+        assert_eq!(reopened.personal_get(&book.root_hash, "progress").unwrap().unwrap()["page"], 7);
+        let imported = reopened.import(File::open(&source).unwrap(), "文档.cafd").unwrap();
+        assert_eq!(imported.id, book.id);
+        reopened.commit(book.clone(), None).unwrap();
+        assert_eq!(reopened.list().unwrap().len(), 2);
+        assert_eq!(reopened.personal_get(&book.root_hash, "progress").unwrap().unwrap()["page"], 7);
         fs::remove_dir_all(s.root).unwrap();
     }
     #[test]
