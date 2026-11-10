@@ -49,6 +49,6 @@ source build/android-env.sh
 
 默认构建 ARM64 调试 APK，输出在 `src-tauri/gen/android/app/build/outputs/apk/`；x86_64 模拟器可用 `cargo make reader android -- --target x86_64`。APK 不包含内容文档。
 
-`cargo make reader android --release` 生成 ARM64 正式 APK，不自动配置签名。本仓库 Release 工作流使用独立密钥签名和校验后上传，签名 Secrets 与发布步骤见 [发布说明](releasing.md)。
+`cargo make reader android --release` 生成 ARM64 未签名正式 APK。本仓库 `Reader Release` 工作流仅对齐并校验 APK，不执行签名，也不需要签名 Secrets；未签名 APK 需要另行签名后才能安装。发布步骤见 [发布说明](releasing.md)。
 
 工具链依据：[Tauri 前提条件](https://tauri.app/start/prerequisites/)、[Android 命令行工具下载与 SHA-256](https://developer.android.com/studio#command-line-tools-only)、[sdkmanager](https://developer.android.com/tools/sdkmanager)、[Visual Studio 安装命令行](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio)。

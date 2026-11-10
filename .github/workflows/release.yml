@@ -1,4 +1,4 @@
-name: 阅读器 Release
+name: Reader Release
 
 on:
   push:
@@ -41,18 +41,21 @@ jobs:
         run: node scripts/release.mjs metadata "$SOURCE_TAG" >> "$GITHUB_OUTPUT"
 
   desktop:
+    name: ${{ matrix.label }}
     needs: validate
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
+            label: windows
             platform: windows
             target: x86_64-pc-windows-msvc
             bundle: nsis
             extension: exe
             suffix: windows-x64-setup.exe
           - os: ubuntu-22.04
+            label: linux (ubuntu)
             platform: linux
             target: x86_64-unknown-linux-gnu
             bundle: deb
@@ -113,19 +116,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
-      - name: 检查 Android 签名配置
-        env:
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if test -z "${!name}"; then
-              echo "::error::缺少 Android 签名配置：$name，详见 docs/releasing.md"
-              exit 1
-            fi
-          done
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
@@ -142,31 +132,16 @@ jobs:
       - run: cargo make test-unit
       - run: cargo make setup-android -- --yes --skip-system --skip-npm
       - run: cargo make reader android --release
-      - name: 对齐、签名并验证正式 APK
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: 对齐并收集未签名正式 APK
         run: |
           source build/android-env.sh
           tools="$ANDROID_HOME/build-tools/$(node -p "JSON.parse(require('fs').readFileSync('config/android-toolchain.json')).build_tools")"
-          mapfile -d '' packages < <(find src-tauri/gen/android/app/build/outputs/apk -type f -path '*/release/*.apk' -print0)
+          mapfile -d '' packages < <(find src-tauri/gen/android/app/build/outputs/apk -type f -path '*/release/*-unsigned.apk' -print0)
           test "${#packages[@]}" -eq 1
-          umask 077
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
           mkdir -p release-assets
-          "$tools/zipalign" -P 16 -f 4 "${packages[0]}" "$RUNNER_TEMP/aligned.apk"
-          apk="release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-android-arm64.apk"
-          "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.jks" \
-            --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
-            --v4-signing-enabled false --out "$apk" "$RUNNER_TEMP/aligned.apk"
-          "$tools/apksigner" verify --verbose "$apk"
+          apk="release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-android-arm64-unsigned.apk"
+          "$tools/zipalign" -P 16 -f 4 "${packages[0]}" "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
-      - name: 清理临时签名材料
-        if: always()
-        run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/aligned.apk"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-android
