@@ -1,5 +1,5 @@
 import {readFileSync,existsSync} from 'node:fs';
-import {delimiter,resolve} from 'node:path';
+import {resolve} from 'node:path';
 
 // 只对 Android 子命令使用项目配置，不改调用终端或用户全局环境。
 export function androidEnvironment(settings,base=process.env,platform=process.platform){
@@ -8,7 +8,8 @@ export function androidEnvironment(settings,base=process.env,platform=process.pl
   if(!settings.env||keys.some(key=>typeof settings.env[key]!=='string'||!settings.env[key])||!Array.isArray(settings.path)||settings.path.some(p=>typeof p!=='string'||!p))throw Error('Android 环境配置无效，请重新运行 cargo make setup-android。');
   const env={...base};
   for(const key of keys)env[key]=settings.env[key];
-  const separator=platform==='win32'?';':delimiter;
+  // 按目标平台选择分隔符，跨平台验证时不能使用宿主的 path.delimiter。
+  const separator=platform==='win32'?';':':';
   // Windows 环境变量名不区分大小写，保留原 PATH 键的拼写。
   const pathKey=Object.keys(env).find(k=>k.toLowerCase()==='path')||'PATH';
   env[pathKey]=[...settings.path,env[pathKey]].filter(Boolean).join(separator);

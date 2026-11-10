@@ -42,3 +42,26 @@ Android 系统要求 APK 签名后才能安装。需要安装时，下载后在�
 4. 等待三个平台全部通过，在 Releases 检查 `build-*` 草稿中的程序版本、UTC 编号、三个附件和 SHA256SUMS，完成必要的目标系统验收并补齐发布说明后手动公开。
 
 只有最后汇总 job 拥有 `contents: write`；其余 job 为只读。仓库必须允许 GitHub Actions 创建标签和 Release。整个工作流按仓库串行运行，避免同时汇总发布。仅重跑失败 job 沿用已生成的编号；重跑整个工作流时重新生成编号。若汇总阶段已经创建标签、但后续 Release 创建失败，重跑汇总会因标签存在而停止，可重跑整个工作流生成新编号，原标签另行人工处理。
+
+## 使用 act 本地验证
+
+在仓库根目录运行，需要 act 与可访问的 Docker。checkout 使用默认事件提交：GitHub 上检出触发提交，act 默认复制当前本地源码（包含未提交修改），无需为检出提供 Token。不要添加 `--no-skip-checkout`，否则会执行真实远端检出。
+
+先运行轻量校验：
+
+```bash
+act workflow_dispatch -W .github/workflows/release.yml -j validate \
+  -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04
+```
+
+运行 Ubuntu 构建、测试和本地产物上传：
+
+```bash
+act workflow_dispatch -W .github/workflows/release.yml \
+  -j desktop --matrix os:ubuntu-22.04 \
+  -P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:act-22.04 \
+  -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04 \
+  --artifact-server-path "$PWD/build/act-artifacts"
+```
+
+Android 可用 `-j android` 及 Ubuntu 24.04 镜像单独运行。镜像和 Actions 已缓存时可加 `--pull=false --action-offline-mode`；构建依赖缺失时仍需联网下载。Windows 需在 Windows 环境验证，不能使用 Linux 容器替代。检测到 act 的 `ACT` 环境变量时，最后创建 GitHub 标签和 Release 草稿的步骤会跳过。
