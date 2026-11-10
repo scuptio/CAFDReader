@@ -33,7 +33,7 @@ async function versionFor(sourceTag=''){
   return validateVersions({metadata:JSON.parse(metadata),lock:JSON.parse(lock),tauri:JSON.parse(tauri),cargo,cargoLock},sourceTag);
 }
 export async function writeChecksums(directory,{version,timestamp}){
-  const expected=['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64.apk'].map(suffix=>`cafd-reader-${version}-${timestamp}-${suffix}`).sort();
+  const expected=['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk'].map(suffix=>`cafd-reader-${version}-${timestamp}-${suffix}`).sort();
   const actual=(await readdir(directory)).sort();
   if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error('发布产物必须恰好包含 Windows x64、Ubuntu x64 和 Android ARM64 三个安装包。');
   const lines=[];
