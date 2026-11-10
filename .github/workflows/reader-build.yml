@@ -1,4 +1,4 @@
-name: 跨平台阅读器验证构建
+name: Reader Build
 on:
   workflow_dispatch:
 permissions:
@@ -18,6 +18,7 @@ jobs:
       - name: 验证安装边界与平台参数（不安装系统依赖）
         run: node tests/android-setup.spec.mjs
   linux:
+    name: linux (ubuntu)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
