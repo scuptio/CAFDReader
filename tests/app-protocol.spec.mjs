@@ -26,5 +26,8 @@ assert.throws(()=>storageKey('a'.repeat(64),'../progress'));
 assert.throws(()=>storageValue('a'.repeat(4097)));
 assert.equal(storageValue({ref:'1-1'}),'{"ref":"1-1"}');
 const host=await readFile(new URL('../web/reader/reader.js',import.meta.url),'utf8');
+assert.ok(host.includes('media-src blob:'),'书内音视频 Blob 必须能在受限 CSP 中播放');
+const nativeConfig=JSON.parse(await readFile(new URL('../src-tauri/tauri.conf.json',import.meta.url)));
+assert.ok(nativeConfig.app.security.csp.includes("media-src 'self' blob:"),'原生顶层 CSP 必须允许书内 Blob 音视频');
 for(const term of ['layoutPages','seg-body','/fonts/','guben','annotationRuns'])assert.ok(!host.includes(term),term+' 不应留在宿主');
 console.log('PASS 协议版本、操作白名单、资源范围、存储隔离及宿主/书内边界');

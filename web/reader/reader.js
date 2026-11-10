@@ -7,7 +7,7 @@ const decoder=new TextDecoder();
 let active=null;
 let sequence=0;
 
-function closeBook(message='请从书架选书，或打开本地 .cafd 文档（兼容旧 .caf）。') {
+function closeBook(message='请从书架选书，或打开本地 .cafd 文档。') {
   sequence++;platform.cancelPending();
   clearExport();
   const session=active;active=null;
@@ -21,7 +21,7 @@ function closeBook(message='请从书架选书，或打开本地 .cafd 文档（
 
 function showMetadata(info,artifact) {
   const box=$('bookMeta');box.replaceChildren();
-  for(const [name,value] of [['标题',info.title || artifact.name],['作者',info.author],['版本',artifact.version],['状态',info.quality==='editorial-preview' ? '审校预览' : info.quality],['说明',info.note],['根杂凑',artifact.rootHash]]) {
+  for(const [name,value] of [['标题',info.title || artifact.name],['作者',info.author],['版本',artifact.version],['状态',info.quality==='editorial-preview' ? '审校预览' : info.quality],['说明',info.note],['SHA-256',artifact.rootHash]]) {
     if(value===undefined)continue;
     const term=document.createElement('dt');term.textContent=name;
     const definition=document.createElement('dd');definition.textContent=String(value);
@@ -39,7 +39,7 @@ function sandboxDocument(html) {
   doc.querySelectorAll('meta[http-equiv="content-security-policy" i]').forEach(el=>el.remove());
   const nonce=crypto.randomUUID().replaceAll('-','');
   const policy=document.createElement('meta');policy.httpEquiv='Content-Security-Policy';
-  policy.content=`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src blob: data:; font-src blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'`;
+  policy.content=`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src blob: data:; font-src blob:; media-src blob:; connect-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'`;
   doc.querySelectorAll('script,style').forEach(el=>el.setAttribute('nonce',nonce));
   doc.head.prepend(policy);
   return '<!doctype html>\n'+doc.documentElement.outerHTML;
@@ -89,6 +89,8 @@ window.addEventListener('message',connectFrame);
 window.addEventListener('message',async event=>{
   const session=active;
   if(!session?.frame || event.source!==session.frame.contentWindow || event.data?.type!=='caf-native-probe' || !await platform.smoke())return;
+  if(active!==session || session.probeReported)return;
+  session.probeReported=true;
   try{
     const root=session.runtime.artifact.rootHash;
     const previousStarts=(await platform.get(root,'native-smoke'))?.starts||0;
@@ -97,7 +99,7 @@ window.addEventListener('message',async event=>{
     const isolated=await platform.get('0'.repeat(64),'native-smoke')===null;
     const response=await fetch(session.input,{headers:{Range:'bytes=0-3'}}),head=new Uint8Array(await response.arrayBuffer());
     const range=response.status===206 && head.length===4 && head[0]===67&&head[1]===65&&head[2]===70&&head[3]===0;
-    await platform.report({...event.data.result,ok:event.data.result.ok&&persisted&&isolated&&range,rootHash:root,title:session.info.title,wasm:true,embeddedApp:true,persisted,isolated,range,previousStarts,sandbox:session.frame.getAttribute('sandbox')});
+    await platform.report({...event.data.result,runtimeStats:await session.runtime.stats(),ok:event.data.result.ok&&persisted&&isolated&&range,rootHash:root,title:session.info.title,wasm:true,embeddedApp:true,persisted,isolated,range,previousStarts,sandbox:session.frame.getAttribute('sandbox')});
   }catch(error){await platform.report({ok:false,error:error.message});}
 });
 
