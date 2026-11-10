@@ -5,7 +5,7 @@
   "local": true,
   "webviews": ["main"],
   "permissions": [
-    "allow-library-list", "allow-library-import", "allow-library-commit", "allow-opened-files",
+    "allow-library-list", "allow-library-remove", "allow-library-import", "allow-library-commit", "allow-opened-files",
     "allow-personal-get", "allow-personal-set", "allow-export-json", "allow-smoke-config", "allow-smoke-result"
   ]
 }
