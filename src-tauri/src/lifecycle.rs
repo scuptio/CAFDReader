@@ -1,9 +1,13 @@
 use crate::{
     commands,
-    state::{Native, Smoke},
+    state::Native,
     storage::Store,
 };
-use std::{path::PathBuf, sync::Mutex};
+#[cfg(desktop)]
+use crate::state::Smoke;
+#[cfg(desktop)]
+use std::path::PathBuf;
+use std::sync::Mutex;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_fs::FilePath;
 
@@ -53,7 +57,10 @@ pub fn run() {
         .register_uri_scheme_protocol("cafcover",|ctx,request|crate::protocol::response(ctx.app_handle(),request,true))
         .invoke_handler(tauri::generate_handler![commands::library_list,commands::library_remove,commands::library_import,commands::library_commit,commands::opened_files,commands::personal_get,commands::personal_set,commands::export_json,commands::smoke_config,commands::smoke_result])
         .setup(|app|{
-            let mut pending=Vec::new();let mut smoke=None;let mut data=None;
+            #[cfg(desktop)]
+            let (mut pending,mut smoke,mut data)=(Vec::new(),None,None);
+            #[cfg(not(desktop))]
+            let (pending,smoke,data)=(Vec::new(),None,None);
             #[cfg(desktop)]
             {
                 let args:Vec<_>=std::env::args_os().skip(1).collect();

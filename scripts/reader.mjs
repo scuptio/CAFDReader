@@ -1,5 +1,5 @@
 // 阅读器任务路由：不复制 Tauri / 宿主构建逻辑，也不启动电子书流水线。
-import {existsSync,readFileSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
 import {dirname,resolve,delimiter,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
@@ -67,6 +67,29 @@ function execute(command,args){
   if(result.status!==0){process.exitCode=result.status??1;return false;}
   return true;
 }
+function findFile(directory,name){
+  if(!existsSync(directory))return null;
+  for(const entry of readdirSync(directory,{withFileTypes:true})){
+    const child=join(directory,entry.name);
+    if(entry.isFile()&&entry.name===name)return child;
+    if(entry.isDirectory()){const found=findFile(child,name);if(found)return found;}
+  }
+  return null;
+}
+export function repairAndroidProject(projectRoot=root){
+  const android=resolve(projectRoot,'src-tauri/gen/android');
+  const task=findFile(resolve(android,'buildSrc/src/main'),'BuildTask.kt');
+  if(!task)throw Error('Android 工程缺少 BuildTask.kt，请重新运行 android init。');
+  const marker='val args = listOf("tauri", "android", "android-studio-script");';
+  const replacement='val cli = File(projectDir, "$rootDirRel/../node_modules/@tauri-apps/cli/tauri.js").canonicalPath\n        val args = listOf(cli, "android", "android-studio-script");';
+  const source=readFileSync(task,'utf8');
+  if(source.includes(marker))writeFileSync(task,source.replace(marker,replacement));
+  else if(!source.includes('node_modules/@tauri-apps/cli/tauri.js'))throw Error('无法识别 Android BuildTask.kt 的 Tauri CLI 调用。');
+  const properties=resolve(android,'gradle.properties');
+  const value=readFileSync(properties,'utf8');
+  if(!/^kotlin\.incremental=false$/m.test(value))writeFileSync(properties,value.replace(/\s*$/,'')+'\n\n# Tauri dependencies and this project may reside on different Windows drives.\nkotlin.incremental=false\n');
+  return task;
+}
 function executable(name){
   const extensions=process.platform==='win32'?(process.env.PATHEXT||'.EXE;.CMD;.BAT').split(';'):[''];
   return (process.env.PATH||'').split(delimiter).some(dir=>extensions.some(ext=>existsSync(join(dir,name+ext))));
@@ -125,9 +148,11 @@ export function main(argv=process.argv.slice(2)){
   heading('CAFD 阅读器',`平台 ${options.platform} · ${options.dev?'开发模式':'构建模式'}`);
   const started=Date.now();
   for(const [index,step] of plan.entries()){
+    if(options.platform==='android'&&step.kind==='tauri'&&step.args[0]==='android'&&['build','dev'].includes(step.args[1]))repairAndroidProject();
     status(`${index+1}/${plan.length}`,commandLine(stepCommand(step)));
     const args=step.kind==='host'?[resolve(root,'scripts/build_host.mjs')]:[tauriCli(),...step.args];
     if(!execute(process.execPath,args)){status('失败',`步骤 ${index+1}/${plan.length} · 退出码 ${process.exitCode} · ${duration(Date.now()-started)}`,'error',process.stderr);return;}
+    if(options.platform==='android'&&step.kind==='tauri'&&step.args[0]==='android'&&step.args[1]==='init')repairAndroidProject();
   }
   console.log();status('完成',`${options.platform} · ${duration(Date.now()-started)}`,'ok');
   if(!options.dev)status('默认目录',outputPath(options.platform));
