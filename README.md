@@ -58,10 +58,10 @@ cargo make fixtures -- --caf-tool /path/to/caf-tool
 
 `cargo make reader web` 生成确定性的 dist-host/release.json（软件/规范版本及文件哈希）。部署到内容站点时使用固定清单及校验后的产物，覆盖站点宿主文件，保留其 books/catalog.json 与内容文件。安装包不包含作品。
 
-规范与阅读器版本独立维护；目前程序为 0.2.1，规范为 1.0.0。工作流仅手动构建，不自动发布。构建与测试不依赖外部内容仓库。
+规范与阅读器版本独立维护；目前程序为 0.1.0，规范为 1.0.0。验证构建工作流手动触发；Release 工作流手动运行或推送 `v*` 正式版本标签后，构建 Windows x64 安装包、Ubuntu x64 `.deb` 和 Android ARM64 正式 APK，汇总为 Release 草稿。每次构建统一生成 UTC 标签，例如 `build-20261110T073000Z`，标题为 `CAFD Reader 0.1.0 · 20261110T073000Z`；正式版本升级仍递增程序版本。不发布 iOS。签名配置与发布步骤见 [发布说明](docs/releasing.md)。构建与测试不依赖外部内容仓库。
 
 ## 大文档读取
 
-0.2.1 在无 JSPI 的 Linux WebKit 中使用专用 Worker 的同步 Range XHR，避免把整个文档转成 ArrayBuffer。本地 File/Blob 在 Worker 中按需切片；原始块和已校验块缓存各限 16 MiB，淘汰后读取重新验证哈希。同步 I/O 不在主线程或文档 iframe 执行。静态 HTTP 服务器需要支持 Range 才能使用网络按需读取。
+0.1.0 在无 JSPI 的 Linux WebKit 中使用专用 Worker 的同步 Range XHR，避免把整个文档转成 ArrayBuffer。本地 File/Blob 在 Worker 中按需切片；原始块和已校验块缓存各限 16 MiB，淘汰后读取重新验证哈希。同步 I/O 不在主线程或文档 iframe 执行。静态 HTTP 服务器需要支持 Range 才能使用网络按需读取。
 
 原生验收为每次启动隔离浏览器缓存和 D-Bus，保留同一个临时原生书架验证记录恢复；支持 `--max-read-bytes`、`--max-cache-bytes` 检查实际读取量。书内可用 `data-caf-ready="false"` 表示仍在初始化，完成后设为 true，验收不会只凭封面提前退出。
