@@ -11,26 +11,29 @@ export const root=fileURLToPath(new URL('../',import.meta.url));
 const require=createRequire(import.meta.url);
 const platforms=['linux','windows','macos','web','android','ios'];
 export const hostPlatform=system=>({linux:'linux',win32:'windows',darwin:'macos'})[system];
-const usage=`用法：cargo make reader [platform] [--plan [--json]] [--dev] [-- Tauri 参数]
+const usage=`用法：cargo make reader [platform] [--plan [--json]] [--dev | --release] [-- Tauri 参数]
 平台：linux、windows、macos、web、android、ios；省略时使用本机桌面平台。
 示例：cargo make reader linux
       cargo make reader android --plan
       cargo make reader linux -- --bundles deb
 桌面默认构建未签名验证包；Android 默认 aarch64 调试 APK；iOS 默认本机架构模拟器。
+Android 正式 APK：cargo make reader android --release（签名须另行配置）。
 web 输出 dist-host；预览用 python3 -m http.server 8611 --directory dist-host。
 环境检查：cargo make doctor [platform]；开发模式：cargo make dev [platform]。`;
 
 export function parseOptions(argv,system=process.platform){
   const separator=argv.indexOf('--'),head=separator<0?[...argv]:argv.slice(0,separator),tail=separator<0?[]:argv.slice(separator+1);
   const take=flag=>{const found=head.includes(flag);for(let i=head.length-1;i>=0;i--)if(head[i]===flag)head.splice(i,1);return found;};
-  const plan=take('--plan'),json=take('--json'),dev=take('--dev'),doctor=take('--doctor'),help=take('--help')||take('-h');
+  const plan=take('--plan'),json=take('--json'),dev=take('--dev'),release=take('--release'),doctor=take('--doctor'),help=take('--help')||take('-h');
   const platform=head[0]&&!head[0].startsWith('-')?head.shift():hostPlatform(system);
   if(!help&&!platforms.includes(platform))throw Error(`不支持的平台：${platform??system}。可用：${platforms.join('、')}`);
-  return {platform,plan,json,dev,doctor,help,extra:[...head,...tail]};
+  if(release&&(platform!=='android'||dev||doctor))throw Error('--release 仅用于 Android 正式构建，不能与 --dev / --doctor 一起使用。');
+  if(release&&[...head,...tail].includes('--debug'))throw Error('--release 不能与 --debug 一起使用。');
+  return {platform,plan,json,dev,release,doctor,help,extra:[...head,...tail]};
 }
 
 export function buildPlan(options,{system=process.platform,arch=process.arch,generated=p=>existsSync(resolve(root,p))}={}){
-  const {platform,dev,extra=[]}=options,current=hostPlatform(system);
+  const {platform,dev,release,extra=[]}=options,current=hostPlatform(system);
   if(!options.plan&&['linux','windows','macos'].includes(platform)&&platform!==current)throw Error(`${platform} 桌面包须在 ${platform} 系统构建；当前为 ${current??system}。`);
   if(!options.plan&&platform==='ios'&&system!=='darwin')throw Error('iOS 构建须在配有 Xcode 的 macOS 上执行。');
   if(platform==='web'){
@@ -43,7 +46,7 @@ export function buildPlan(options,{system=process.platform,arch=process.arch,gen
     const defaults=platform==='android'?['--apk']:['--no-sign'];
     const target=platform==='android'?'aarch64':arch==='arm64'?'aarch64-sim':'x86_64';
     const hasTarget=extra.some(a=>a==='--target'||a.startsWith('--target='));
-    steps.push({kind:'tauri',args:[platform,dev?'dev':'build',...(!dev?['--debug',...defaults]:[]),...(!hasTarget?['--target',target]:[]),...extra]});
+    steps.push({kind:'tauri',args:[platform,dev?'dev':'build',...(!dev?[...(!release?['--debug']:[]),...defaults]:[]),...(!hasTarget?['--target',target]:[]),...extra]});
     return steps;
   }
   const args=[dev?'dev':'build',...(!dev?['--no-sign']:[]),...extra];

@@ -1,0 +1,208 @@
+name: 阅读器 Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reader-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      timestamp: ${{ steps.version.outputs.timestamp }}
+      tag: ${{ steps.version.outputs.tag }}
+      title: ${{ steps.version.outputs.title }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: 校验程序版本并统一生成 UTC 构建编号
+        id: version
+        env:
+          SOURCE_TAG: ${{ github.event_name == 'push' && github.ref_name || '' }}
+        run: node scripts/release.mjs metadata "$SOURCE_TAG" >> "$GITHUB_OUTPUT"
+
+  desktop:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            target: x86_64-pc-windows-msvc
+            bundle: nsis
+            extension: exe
+            suffix: windows-x64-setup.exe
+          - os: ubuntu-22.04
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            bundle: deb
+            extension: deb
+            suffix: ubuntu-x64.deb
+    runs-on: ${{ matrix.os }}
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+      BUILD_TIMESTAMP: ${{ needs.validate.outputs.timestamp }}
+      BUILD_TARGET: ${{ matrix.target }}
+      BUILD_PLATFORM: ${{ matrix.platform }}
+      BUNDLE: ${{ matrix.bundle }}
+      EXTENSION: ${{ matrix.extension }}
+      SUFFIX: ${{ matrix.suffix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: 安装 Linux 构建及验收依赖
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf xvfb
+      - run: cargo install cargo-make --version 0.37.24 --locked
+      - run: npm ci
+      - run: cargo make test
+      - run: cargo make reader "$BUILD_PLATFORM" -- --target "$BUILD_TARGET" --bundles "$BUNDLE"
+      - name: Linux 原生重开验收
+        if: runner.os == 'Linux'
+        run: xvfb-run -a cargo make test-native -- --binary "src-tauri/target/$BUILD_TARGET/release/cafd-reader" --book tests/fixtures/reader.cafd --report build/release-native-validation.json
+        env:
+          WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+      - name: 收集唯一安装包
+        run: |
+          shopt -s nullglob
+          packages=(src-tauri/target/"$BUILD_TARGET"/release/bundle/"$BUNDLE"/*."$EXTENSION")
+          test "${#packages[@]}" -eq 1
+          mkdir -p release-assets
+          cp "${packages[0]}" "release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-$SUFFIX"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  android:
+    needs: validate
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+      BUILD_TIMESTAMP: ${{ needs.validate.outputs.timestamp }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+      - name: 检查 Android 签名配置
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if test -z "${!name}"; then
+              echo "::error::缺少 Android 签名配置：$name，详见 docs/releasing.md"
+              exit 1
+            fi
+          done
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - run: cargo install cargo-make --version 0.37.24 --locked
+      - run: npm ci
+      - run: cargo make test-unit
+      - run: cargo make setup-android -- --yes --skip-system --skip-npm
+      - run: cargo make reader android --release
+      - name: 对齐、签名并验证正式 APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          source build/android-env.sh
+          tools="$ANDROID_HOME/build-tools/$(node -p "JSON.parse(require('fs').readFileSync('config/android-toolchain.json')).build_tools")"
+          mapfile -d '' packages < <(find src-tauri/gen/android/app/build/outputs/apk -type f -path '*/release/*.apk' -print0)
+          test "${#packages[@]}" -eq 1
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          mkdir -p release-assets
+          "$tools/zipalign" -P 16 -f 4 "${packages[0]}" "$RUNNER_TEMP/aligned.apk"
+          apk="release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-android-arm64.apk"
+          "$tools/apksigner" sign --ks "$RUNNER_TEMP/release.jks" \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
+            --v4-signing-enabled false --out "$apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" verify --verbose "$apk"
+          "$tools/zipalign" -c -P 16 4 "$apk"
+      - name: 清理临时签名材料
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/aligned.apk"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-android
+          path: release-assets/*.apk
+          if-no-files-found: error
+
+  release:
+    needs: [validate, desktop, android]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.validate.outputs.tag }}
+      RELEASE_TITLE: ${{ needs.validate.outputs.title }}
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: 校验三平台产物并生成 SHA-256 清单
+        run: node scripts/release.mjs checksums "$RELEASE_TAG" release-assets
+      - name: 创建 Release 草稿，留待人工公开
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          options=()
+          if [[ "$VERSION" == *-* ]]; then options+=(--prerelease); fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
+          gh release create "$RELEASE_TAG" release-assets/* --verify-tag --draft \
+            --title "$RELEASE_TITLE" --generate-notes "${options[@]}"

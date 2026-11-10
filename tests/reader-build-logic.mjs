@@ -19,6 +19,8 @@ assert.deepEqual(buildPlan(parseOptions(['--dev','linux'],'linux'),on('linux'))[
 const android=buildPlan(parseOptions(['android'],'linux'),on('linux'));
 assert.equal(android.length,2);assert.deepEqual(android[0].args.slice(0,3),['android','init','--ci']);
 assert.deepEqual(android[1].args,['android','build','--debug','--apk','--target','aarch64']);
+assert.deepEqual(buildPlan(parseOptions(['android','--release'],'linux'),on('linux')).at(-1).args,['android','build','--apk','--target','aarch64']);
+for(const args of [['android','--release','--dev'],['android','--release','--doctor'],['ios','--release'],['linux','--release'],['android','--release','--','--debug']])assert.throws(()=>parseOptions(args,'linux'),/--release/);
 const existing=buildPlan(parseOptions(['android','--','--target','x86_64'],'linux'),on('linux','x64',()=>true));
 assert.equal(existing.length,1);assert.equal(existing[0].args.filter(a=>a==='--target').length,1);assert.equal(existing[0].args.at(-1),'x86_64');
 for(const [arch,target] of [['arm64','aarch64-sim'],['x64','x86_64']])assert.ok(buildPlan(parseOptions(['ios'],'darwin'),on('darwin',arch)).at(-1).args.includes(target));

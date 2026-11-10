@@ -1,6 +1,6 @@
 [package]
 name = "cafd-reader"
-version = "0.2.1"
+version = "0.1.0"
 description = "CAFD 跨平台交互文档阅读器"
 edition = "2021"
 rust-version = "1.90"
