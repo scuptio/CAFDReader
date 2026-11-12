@@ -1,5 +1,7 @@
 # CAFD — CAF Document
 
+> [English](../en/CAFD.md) | 简体中文
+
 规范版本：1.0.0。规范与阅读器产品版本独立维护。
 
 CAFD 是基于 CAF 容器的交互文档约定，扩展名 `.cafd`，中文称“CAF 交互文档”。文档可承载文字、图像、数据、字体和内置交互应用；古籍电子书只是可承载的内容类型之一，CAFD 不限定为书籍。
@@ -22,4 +24,4 @@ CAFD 是基于 CAF 容器的交互文档约定，扩展名 `.cafd`，中文称�
 
 能力和应用协议标识统一使用 `caf:doc@1` 与 `caf:doc-web@1`；宿主不接受旧命名标识。组件名 `ebook`、world `ebook-reader` 和函数 ABI 保持不变。修改容器内的能力或应用协议声明须重新打包与校验，会改变容器根哈希；按旧根哈希隔离的个人记录不会自动关联到新容器。
 
-应用握手、能力边界、资源和存储限制见 [ebook-web v1](ebook-web-v1.md)。阅读器品牌、旧文件与数据兼容属于 [实现兼容说明](../docs/compatibility.md)。
+应用握手、能力边界、资源和存储限制见 [ebook-web v1](ebook-web-v1.md)。阅读器品牌、旧文件与数据兼容属于 [实现兼容说明](../../docs/zh-CN/compatibility.md)。

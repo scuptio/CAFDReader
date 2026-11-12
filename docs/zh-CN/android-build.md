@@ -1,5 +1,7 @@
 # Android 构建环境
 
+> [English](../en/android-build.md) | 简体中文
+
 支持 Ubuntu 22.04+ x64 和 Windows 10/11 x64。先安装项目基础工具：Node.js 24+、Python 3.11+、Rust（通过 rustup）及 cargo-make 0.37.24+。Windows 的 `python` 命令须可用；系统依赖安装需要 winget（App Installer），首次安装建议在管理员 PowerShell 中运行。
 
 在仓库根目录执行，Ubuntu 和 Windows 使用同一入口：
@@ -13,7 +15,7 @@ cargo make reader android
 
 `setup-android` 安装 Ubuntu 的 Java 21 JDK 和基础编译依赖；Windows 缺少时通过 winget 安装 Temurin 21 JDK 和 Visual Studio C++ Build Tools，已有 Visual Studio 缺少 C++ 组件时补齐。Ubuntu 通过 sudo 请求系统包安装权限，Windows 安装器可能请求提升权限或重启；重启后可重新运行任务。
 
-随后下载并校验 Android 命令行工具，安装 SDK Platform、Build Tools、NDK、platform-tools，添加 ARM64 与 x86_64 Android Rust target，并执行 `npm ci`。版本集中维护在 [工具链配置](../config/android-toolchain.json)。重复运行会复用命令行工具和 SDK 包，不删除现有 SDK，也不执行全局 SDK 升级。
+随后下载并校验 Android 命令行工具，安装 SDK Platform、Build Tools、NDK、platform-tools，添加 ARM64 与 x86_64 Android Rust target，并执行 `npm ci`。版本集中维护在 [工具链配置](../../config/android-toolchain.json)。重复运行会复用命令行工具和 SDK 包，不删除现有 SDK，也不执行全局 SDK 升级。
 
 首次运行默认交互接受 Android SDK 许可证。需要无人值守安装时显式使用：
 

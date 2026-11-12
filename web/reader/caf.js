@@ -23,7 +23,12 @@ const TAG_COMPONENT = 0;
 const TAG_PAYLOAD = 1;
 const TAG_MANIFEST = 2;
 const TAG_SIGNATURE = 3;
+const TAG_KEYBOX = 4;
+const TAG_PRIVATE = 5;
+const KNOWN_TAGS = new Set([TAG_COMPONENT, TAG_PAYLOAD, TAG_MANIFEST, TAG_SIGNATURE, TAG_KEYBOX, TAG_PRIVATE]);
 const FLAG_SIGNED = 0x0001;
+const FLAG_ENCRYPTED = 0x0002;
+const KNOWN_FLAGS = FLAG_SIGNED | FLAG_ENCRYPTED;
 
 const utf8 = new TextDecoder();
 const utf8enc = new TextEncoder();
@@ -300,9 +305,11 @@ function readHeader(bytes) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const headerSize = leU16(dv, 8);
   if (headerSize !== HEADER_SIZE) throw new Error(`unsupported header size ${headerSize}`);
+  const flags = leU16(dv, 10);
+  if (flags & ~KNOWN_FLAGS) throw new Error(`unknown header flags 0x${flags.toString(16)}`);
   return {
     formatVersion: leU32(dv, 4),
-    flags: leU16(dv, 10),
+    flags,
     manifestOffset: leU64(dv, 12),
     manifestLen: leU64(dv, 20),
     interfaceOffset: leU64(dv, 28),
@@ -319,13 +326,20 @@ function decodeDirectory(bytes) {
   const entries = [];
   let pos = 4;
   for (let i = 0; i < count; i++) {
+    const tag = bytes[pos];
+    if (!KNOWN_TAGS.has(tag)) throw new Error(`unknown directory entry tag ${tag}`);
+    const flags = bytes[pos + 1];
+    if (flags !== 0) throw new Error(`unknown directory entry flags 0x${flags.toString(16)}`);
+    const hashAlg = bytes[pos + 2];
+    if (hashAlg !== 0) throw new Error(`unknown directory entry hash algorithm ${hashAlg}`);
+    if (bytes[pos + 3] !== 0) throw new Error("nonzero reserved byte in directory entry");
     entries.push({
-      tag: bytes[pos],
-      offset: leU64(dv, pos + 1),
-      length: leU64(dv, pos + 9),
-      hash: toHex(bytes.slice(pos + 17, pos + 49)),
+      tag,
+      offset: leU64(dv, pos + 4),
+      length: leU64(dv, pos + 12),
+      hash: toHex(bytes.slice(pos + 20, pos + 52)),
     });
-    pos += 49;
+    pos += 52;
   }
   return entries;
 }
@@ -364,16 +378,38 @@ function findNode(root, path) {
 }
 
 // RootHash = SHA256("CAF1" || u64le(len)||ManifestHash || u64le(len)||InterfaceHash
-//                   || u64le(n)||(u64le(len)||WasmHash)* || u64le(len)||PayloadRootHash)
-function computeRootHash(manifestHashHex, interfaceHashHex, wasmHashesHex, payloadRootHex) {
+//                   || u64le(n)||(u64le(len)||WasmHash)*
+//                   || u64le(m)||(u64le(len)||PayloadRootHash)*)
+function computeRootHash(manifestHashHex, interfaceHashHex, wasmHashesHex, payloadRootsHex) {
   const parts = [utf8enc.encode("CAF1")];
   const push = (hex) => { const raw = hexToBytes(hex); parts.push(u64le(raw.length), raw); };
   push(manifestHashHex);
   push(interfaceHashHex);
   parts.push(u64le(wasmHashesHex.length));
   for (const h of wasmHashesHex) push(h);
-  push(payloadRootHex);
+  parts.push(u64le(payloadRootsHex.length));
+  for (const h of payloadRootsHex) push(h);
   return toHex(sha256Sync(concatBytes(parts)));
+}
+
+// Payload name rules (mirrors caf-core::payload::validate_payloads): names are
+// unique, non-empty path segments; the first payload mounts at "/".
+function validatePayloads(payloads) {
+  const names = new Set();
+  for (const p of payloads) {
+    const name = p.name || "";
+    if (name === "" || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+      throw new Error(`invalid payload name '${name}'`);
+    }
+    if (names.has(name)) throw new Error(`duplicate payload name '${name}'`);
+    names.add(name);
+  }
+}
+
+// Access scopes address the default payload by empty name or its own name.
+function resolvePayloadIndex(payloads, name) {
+  if (!name || name === payloads[0]?.name) return 0;
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -391,7 +427,7 @@ export class Artifact {
     this.manifest = manifest;
     this.directory = directory;
     this.components = components; // [{ ref, bytes, entry }]
-    this.signature = signature; // { fingerprint, valid } | null
+    this.signature = signature; // { fingerprint, valid, signers } | null
     const fileList = collectFiles(manifest.payloads[0].root, "", []);
     const payloadEntries = directory.filter((e) => e.tag === TAG_PAYLOAD);
     if (payloadEntries.length !== fileList.length) {
@@ -759,6 +795,9 @@ export async function openCaf(input) {
   const manifestHash = sha256Hex(manifestBytes);
   if (manifestHash !== manifestEntry.hash) throw new Error("manifest hash mismatch");
 
+  // Sealed artifacts need a content key; this reader profile does not accept them.
+  if (header.flags & FLAG_ENCRYPTED) throw new Error("artifact is sealed (encrypted); this reader only opens plaintext documents");
+
   const manifest = decodeCBOR(manifestBytes, 0).value;
   if (header.formatVersion !== manifest.format_version) throw new Error("format version mismatch");
 
@@ -771,6 +810,7 @@ export async function openCaf(input) {
   if (!manifest.payloads || manifest.payloads.length !== 1) {
     throw new Error("expected exactly one payload tree");
   }
+  validatePayloads(manifest.payloads);
   if (manifest.payloads[0].compressed) {
     throw new Error("payload compression is reserved in format v1 (not yet implemented)");
   }
@@ -778,6 +818,9 @@ export async function openCaf(input) {
   verifyTree(payloadRoot);
   for (const comp of manifest.components || []) {
     for (const scope of comp.access || []) {
+      if (resolvePayloadIndex(manifest.payloads, scope.payload || "") === null) {
+        throw new Error(`access scope '${scope.path}': unknown payload '${scope.payload}'`);
+      }
       const node = findNode(payloadRoot, scope.path);
       if (!node) throw new Error(`access scope '${scope.path}' not found`);
       if (node.hash !== scope.hash) throw new Error(`access scope '${scope.path}' hash mismatch`);
@@ -802,24 +845,39 @@ export async function openCaf(input) {
   }
 
   // 4. Root identity.
-  const rootHash = computeRootHash(manifestHash, interfaceHash, wasmHashes, payloadRoot.hash);
+  const payloadRoots = (manifest.payloads || []).map((p) => p.root.hash);
+  const rootHash = computeRootHash(manifestHash, interfaceHash, wasmHashes, payloadRoots);
   if (rootHash !== header.rootHash) throw new Error("root hash mismatch");
 
-  // 5. Signature (best-effort: needs WebCrypto Ed25519).
-  let signature = null;
-  if (header.flags & FLAG_SIGNED) {
-    const sigEntry = directory.find((e) => e.tag === TAG_SIGNATURE);
-    if (!sigEntry) throw new Error("signed artifact has no signature directory entry");
-    const sigBytes = await source.readAt(sigEntry.offset, sigEntry.length);
-    if (sigBytes.length !== 96) throw new Error("signature section has unexpected length");
-    const pubkey = sigBytes.slice(0, 32);
-    const sig = sigBytes.slice(32, 96);
-    signature = { fingerprint: sha256Hex(pubkey), valid: await tryVerifyEd25519(pubkey, sig, manifestBytes) };
-    if (signature.valid === false) throw new Error("invalid signature");
-  }
+  // 5. Signature over the root hash (best-effort: needs WebCrypto Ed25519).
+  const signature = await readSignature(source, header, directory, rootHash);
 
   const artifact = new Artifact(source, header, manifest, directory, components, signature);
   return artifact;
+}
+
+// The signature section is a CBOR list of { alg, key_id, pubkey, sig } entries
+// over the 32-byte header root hash. Every entry must verify; unknown
+// algorithms are a hard error (fail-closed).
+async function readSignature(source, header, directory, rootHash) {
+  if (!(header.flags & FLAG_SIGNED)) return null;
+  const sigEntry = directory.find((e) => e.tag === TAG_SIGNATURE);
+  if (!sigEntry) throw new Error("signed artifact has no signature directory entry");
+  const sigBytes = await source.readAt(sigEntry.offset, sigEntry.length);
+  const list = decodeCBOR(sigBytes, 0).value;
+  if (!Array.isArray(list) || list.length === 0) throw new Error("signature section is empty");
+  const signers = [];
+  let valid = true;
+  for (const entry of list) {
+    if (entry.alg !== "ed25519") throw new Error(`unknown signature algorithm ${entry.alg}`);
+    const fingerprint = sha256Hex(entry.pubkey);
+    if (entry.key_id !== fingerprint) throw new Error("signature key_id does not match its public key");
+    const v = await tryVerifyEd25519(entry.pubkey, entry.sig, hexToBytes(rootHash));
+    if (v === false) throw new Error("invalid signature");
+    signers.push({ fingerprint, valid: v });
+    if (v !== true) valid = v; // null = unverifiable platform
+  }
+  return { fingerprint: signers[0].fingerprint, valid, signers };
 }
 
 async function tryVerifyEd25519(pubkey, sig, msg) {
