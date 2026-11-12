@@ -54,7 +54,6 @@ const translations={
   "已从书架移除，文件仍保留在原位置。": "Removed from the library. The file remains in its original location.",
   "书架暂无书籍。已从书架移除，文件仍保留在原位置。": "The library is empty. Removed from the library; the file remains in its original location.",
   "移除失败：{error}": "Remove failed: {error}",
-  "CAFD 交互文档，内含内容、资源与阅读应用。": "CAFD interactive documents include content, resources and a reader app.",
   "书架暂无书籍，可打开本地 CAFD 文档。": "The library is empty. Open a local CAFD document.",
   "正在校验并导入 CAFD 文档…": "Verifying and importing CAFD document…",
   "书架暂无书籍，请导入 CAFD 文档。": "The library is empty. Import a CAFD document.",

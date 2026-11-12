@@ -21,8 +21,8 @@ try {
     remove.onclick=async()=>{remove.disabled=true;try{await platform.removeBook(book);article.remove();text(document.getElementById('shelfStatus'),shelf.children.length?'已从书架移除，文件仍保留在原位置。':'书架暂无书籍。已从书架移除，文件仍保留在原位置。');}catch(error){remove.disabled=false;text(document.getElementById('shelfStatus'),'移除失败：{error}',{error:error.message});}};
     article.append(heading,author,status,...(platform.native?[]:[download]),remove,hash);shelf.appendChild(article);
   }
-  text(document.getElementById('shelfStatus'),shelf.children.length ? 'CAFD 交互文档，内含内容、资源与阅读应用。' : '书架暂无书籍，可打开本地 CAFD 文档。');
+  text(document.getElementById('shelfStatus'),shelf.children.length ? '' : '书架暂无书籍，可打开本地 CAFD 文档。');
 } catch(error) {document.getElementById('shelfStatus').textContent=error.message;}
 
-async function importNative(opened=false){const status=document.getElementById('shelfStatus');try{text(status,'正在校验并导入 CAFD 文档…');const book=opened?(await platform.consumeOpened()).at(-1):await platform.importBook();if(book)location.href='reader/index.html?'+new URLSearchParams({library:book.id});else text(status,opened?(shelf.children.length?'CAFD 交互文档，内含内容、资源与阅读应用。':'书架暂无书籍，请导入 CAFD 文档。'):'未选择文件。');}catch(error){text(status,'导入失败：{error}',{error:error.message});await platform.report({ok:false,error:error.message});}}
+async function importNative(opened=false){const status=document.getElementById('shelfStatus');try{text(status,'正在校验并导入 CAFD 文档…');const book=opened?(await platform.consumeOpened()).at(-1):await platform.importBook();if(book)location.href='reader/index.html?'+new URLSearchParams({library:book.id});else text(status,opened?(shelf.children.length?'':'书架暂无书籍，请导入 CAFD 文档。'):'未选择文件。');}catch(error){text(status,'导入失败：{error}',{error:error.message});await platform.report({ok:false,error:error.message});}}
 if(platform.native){document.getElementById('btnImport').hidden=false;document.getElementById('btnImport').onclick=()=>importNative();window.addEventListener('caf-native-open',()=>importNative(true));await importNative(true);}

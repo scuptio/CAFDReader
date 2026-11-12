@@ -49,6 +49,17 @@
  #readerAbout dd { margin-bottom:12px; }
  #readerAbout button { position:sticky; bottom:0; width:100%; min-height:48px; }
 }
+.reader-header .app-topbar, .shelf-topbar { min-height:40px; padding:2px 16px; }
+.reader-header .reader-menu > summary, .shelf-topbar .reader-menu > summary { min-height:32px; padding:4px 10px; }
+.reader-header .document-toolbar { min-height:36px; padding:3px 16px; }
+.reader-header .document-toolbar button { padding:3px 10px; font-size:13px; line-height:20px; }
+@media(max-width:600px) {
+ .reader-header .app-topbar, .shelf-topbar { min-height:44px; padding:0 max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left)); }
+ .reader-header .reader-menu > summary, .shelf-topbar .reader-menu > summary { min-height:44px; padding:4px 10px; }
+ .reader-header .reader-menu-panel, .shelf-topbar .reader-menu-panel { top:calc(48px + env(safe-area-inset-top)); max-height:calc(100dvh - 72px); }
+ .reader-header .document-toolbar { min-height:40px; padding:2px 12px; }
+ .reader-header .document-toolbar button, .reader-header .document-toolbar summary { min-height:36px; }
+}
 @media(prefers-reduced-motion:no-preference) {
  #readerAbout[open] { animation:about-appear .15s ease-out; }
  @keyframes about-appear { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
