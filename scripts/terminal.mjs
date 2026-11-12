@@ -14,4 +14,4 @@ export function status(label,message,kind='info',stream=process.stdout){
   stream.write(`${' '.repeat(Math.max(2,10-width))}${paint(label,styles[kind]||styles.info,stream)}  ${message}\n`);
 }
 export const commandLine=args=>args.map(s=>/^[\w./:@=+-]+$/.test(s)?s:JSON.stringify(s)).join(' ');
-export const duration=milliseconds=>milliseconds<60000?`${(milliseconds/1000).toFixed(1)} 秒`:`${Math.floor(milliseconds/60000)} 分 ${Math.floor(milliseconds/1000)%60} 秒`;
+export const duration=milliseconds=>milliseconds<60000?`${(milliseconds/1000).toFixed(1)}s`:`${Math.floor(milliseconds/60000)}m ${Math.floor(milliseconds/1000)%60}s`;

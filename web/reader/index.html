@@ -2,24 +2,39 @@
 <html lang="zh-Hans">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>CAFD 阅读器</title>
   <link rel="stylesheet" href="reader.css" />
+  <link rel="stylesheet" href="../about.css" />
 </head>
 <body>
-  <header>
-    <a href="../">书架</a>
-    <span id="hostTitle">CAFD 阅读器</span>
-    <button id="btnOpen">打开 .cafd</button>
-    <button id="btnClose" disabled>关闭</button>
-    <input id="fileInput" type="file" accept=".cafd,.caf" hidden />
-    <details id="bookMetadata" hidden><summary>文档元信息</summary><dl id="bookMeta"></dl></details>
+  <header class="reader-header">
+    <div class="app-topbar">
+      <a class="library-link" href="../" data-i18n="书架">书架</a>
+      <span id="hostTitle" data-i18n="CAFD 阅读器">CAFD 阅读器</span>
+      <details id="readerMenu" class="reader-menu">
+        <summary><span class="menu-label" data-i18n="设置与帮助">设置与帮助</span><span class="menu-icon" aria-hidden="true">⋯</span></summary>
+        <div class="reader-menu-panel">
+          <p class="menu-heading" data-i18n="阅读器设置">阅读器设置</p>
+          <label class="language-setting"><span data-i18n="界面语言">界面语言</span><select id="uiLanguage"><option value="zh-CN">中文</option><option value="en">English</option></select></label>
+          <span id="languageStatus" role="status"></span>
+          <button id="btnAbout" type="button" aria-haspopup="dialog"><span data-i18n="关于阅读器">关于阅读器</span><span aria-hidden="true">↗</span></button>
+        </div>
+      </details>
+    </div>
+    <div class="document-toolbar">
+      <button id="btnOpen" data-i18n="打开 .cafd">打开 .cafd</button>
+      <button id="btnClose" disabled data-i18n="关闭">关闭</button>
+      <input id="fileInput" type="file" accept=".cafd,.caf" hidden />
+      <details id="bookMetadata" hidden><summary data-i18n="文档元信息">文档元信息</summary><dl id="bookMeta"></dl></details>
+    </div>
   </header>
   <main>
-    <aside id="exportPanel" hidden><span id="exportFilename"></span> <a id="exportSave">保存导出文件</a> <button id="exportCancel">取消导出</button></aside>
-    <p id="hostStatus" role="status">请打开 .cafd 文件。</p>
+    <aside id="exportPanel" hidden><span id="exportFilename"></span> <a id="exportSave" data-i18n="保存导出文件">保存导出文件</a> <button id="exportCancel" data-i18n="取消导出">取消导出</button></aside>
+    <p id="hostStatus" role="status" data-i18n="请打开 .cafd 文件。">请打开 .cafd 文件。</p>
     <div id="bookFrameSlot"></div>
   </main>
   <script type="module" src="reader.js"></script>
+  <script type="module" src="../about.js"></script>
 </body>
 </html>

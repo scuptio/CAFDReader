@@ -10,7 +10,7 @@ self.onmessage=({data})=>{
       if(op==='open') {
         artifact=await openCaf(data.source);
         if(data.requiredCapability&&(!Array.isArray(artifact.capabilities)||!artifact.capabilities.includes(data.requiredCapability)))throw new Error(`此 CAF 容器不是本阅读器支持的 CAFD 文档（缺少 ${data.requiredCapability}）`);
-        component=await artifact.instantiate(data.component || artifact.components[0]?.ref?.name || 'ebook');
+        component=await artifact.instantiate(data.component || artifact.components[0]?.ref?.name || 'cafd');
         value={name:artifact.name,version:artifact.version,rootHash:artifact.rootHash,capabilities:artifact.capabilities,files:Object.fromEntries(artifact.payloadFiles().map(p=>[p,artifact.fileLength(p)]))};
       } else if(!artifact) throw new Error('CAF 未打开');
       else if(op==='callPacked') value=await component.callPacked(data.name,...data.args);

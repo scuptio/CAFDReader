@@ -17,7 +17,7 @@ export function resourcePath(path,files) {
   return path;
 }
 export function appManifest(value,files) {
-  if(value?.protocol!==APP_PROTOCOL || value.component!=='ebook' || !Array.isArray(value.methods) || !value.methods.length || value.methods.length>32 || value.methods.some(m=>typeof m!=='string' || !/^[a-z][a-z0-9-]{0,63}$/.test(m))) throw new Error('Unsupported book application manifest');
+  if(value?.protocol!==APP_PROTOCOL || value.component!=='cafd' || !Array.isArray(value.methods) || !value.methods.length || value.methods.length>32 || value.methods.some(m=>typeof m!=='string' || !/^[a-z][a-z0-9-]{0,63}$/.test(m))) throw new Error('Unsupported book application manifest');
   resourcePath(value.entry,files);
   if(!value.entry.endsWith('.html') || files[value.entry]>2*1024*1024) throw new Error('Invalid application entry');
   return value;

@@ -2,6 +2,8 @@
 
 > English | [简体中文](README.zh-CN.md)
 
+The current specification is **1.0.0-draft.1 (unstable draft)**. It is not finalized and does not promise backward compatibility between drafts; fields, component names, worlds, ABI, and protocol conventions may change. Program and specification versions are maintained independently.
+
 [![Reader Release](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml)
 
 A cross-platform thin host for CAFD (CAF Document, `.cafd`) interactive documents. It supports documents conforming to the current reading profile and does not promise to open every CAF file. The content and the layout application ship with the document; the host handles the bookshelf, files, metadata, and a restricted bridge. CAFD is a document profile built on the [CAF](https://github.com/ybbh/caf) container format.
@@ -16,7 +18,11 @@ python3 -m http.server 8612 --bind 127.0.0.1 --directory dist-host
 
 Open <http://127.0.0.1:8612/reader/> in a browser, click 「打开 .cafd」 (*Open .cafd*) to pick a local file, or drag a file into the window.
 
+The library and reader offer a top Settings & help menu with a 中文 / English UI language selector and an About Reader window showing the app version, implemented CAFD specification version and stability status, container format, capability, and app protocol. Language preferences are saved locally; switching languages keeps the current document open and does not translate its embedded app. Version information is generated from the program and specification version records during the build. On phones, use the top-right more menu; controls have larger touch targets and About opens as a bottom panel.
+
 ## Build and run
+
+All project task descriptions, progress messages, diagnostics, and test summaries printed by `cargo make` use English, independently of the reader UI language.
 
 Requires Node.js 24, Python 3.11+, Rust, and the platform SDKs. Linux needs the GTK 3 and WebKitGTK 4.1 development libraries; Windows needs MSVC and WebView2; macOS/iOS need Xcode; Android needs Java 21, the SDK, and the NDK.
 
@@ -65,14 +71,14 @@ cargo make fixtures -- --caf-tool /path/to/caf-tool
 
 ## Specification and artifacts
 
-- [CAFD 1.0.0](spec/en/CAFD.md)
-- [App bridge protocol](spec/en/ebook-web-v1.md)
+- [CAFD 1.0.0-draft.1](spec/en/CAFD.md)
+- [App bridge protocol](spec/en/cafd-web-v1.md)
 - [Implementation compatibility](docs/en/compatibility.md)
 - [CAF browser runtime](docs/en/runtime.md)
 
 `cargo make reader web` produces a deterministic dist-host/release.json (software/spec versions and per-file hashes). When deploying to a content site, use the pinned manifest and the verified artifacts, overwriting the site's host files while keeping its books/catalog.json and content files. Installers contain no works.
 
-The spec and the reader are versioned independently; the program is currently 0.1.0 and the spec 1.0.0. CI keeps only `Reader Release`: a manual run or pushing a `v*` release tag builds the Windows x64 installer, the Ubuntu x64 `.deb`, and the Android ARM64 unsigned release APK, collected into a Release draft. The workflow does not sign anything and needs no signing secrets; the Android APK must be signed separately before it can be installed. Every build gets a unified UTC tag, e.g. `build-20261110T073000Z`, titled `CAFD Reader 0.1.0 · 20261110T073000Z`; an actual release still bumps the program version. iOS is not published. Release steps are in [the release notes](docs/en/releasing.md). Builds and tests do not depend on external content repositories.
+The spec and the reader are versioned independently; the program is currently 0.1.0 and the spec 1.0.0-draft.1. CI keeps only `Reader Release`: a manual run or pushing a `v*` release tag builds the Windows x64 installer, the Ubuntu x64 `.deb`, and the Android ARM64 unsigned release APK, collected into a Release draft. The workflow does not sign anything and needs no signing secrets; the Android APK must be signed separately before it can be installed. Every build gets a unified UTC tag, e.g. `build-20261110T073000Z`, titled `CAFD Reader 0.1.0 · 20261110T073000Z`; an actual release still bumps the program version. iOS is not published. Release steps are in [the release notes](docs/en/releasing.md). Builds and tests do not depend on external content repositories.
 
 ## Large-document reading
 

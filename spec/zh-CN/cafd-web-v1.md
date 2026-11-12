@@ -1,14 +1,16 @@
 # caf:doc-web@1
 
-> [English](../en/ebook-web-v1.md) | 简体中文
+> [English](../en/cafd-web-v1.md) | 简体中文
 
-规范版本 1.0.0。当前阅读文档 profile 为 caf:doc@1;WASM 数据接口由文档提供,宿主不解释排版或篇章。
+当前规范为 **1.0.0-draft.1（不稳定草案）**，尚未定版，不承诺草案之间向后兼容；字段、组件名、world、ABI 和协议约定仍可能调整。程序版本与规范版本独立维护。
+
+规范版本 1.0.0-draft.1。当前阅读文档 profile 为 caf:doc@1;WASM 数据接口由文档提供,宿主不解释排版或篇章。
 
 ## 发现与挂载
 
 info() 返回 JSON 元信息,web_app_manifest 字段指向 /app/manifest.json。
 清单结构:
-  {"protocol":"caf:doc-web@1","component":"ebook","entry":"/app/index.html",
+  {"protocol":"caf:doc-web@1","component":"cafd","entry":"/app/index.html",
    "methods":["info","toc","get","window","search","lookup","entity"],"sources":{...}}
 v1 HTML 入口自包含脚本与样式,不引用远端脚本、外部样式或嵌套框架。
 宿主经 CAF Worker 校验后读取元信息、清单和 HTML;未知协议或不合法路径拒绝挂载。

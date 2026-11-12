@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""实际运行原生 WebView 两次，核对开卷、权限边界与跨进程保存。"""
+"""Launch the native WebView twice to verify document opening, permission boundaries and persistence."""
 import argparse,json,os,shutil,subprocess,sys,tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
@@ -24,7 +24,7 @@ def main():
             if sys.platform.startswith('linux') and shutil.which('dbus-run-session'):command=['dbus-run-session','--',*command]
             result=subprocess.run(command,env=env,capture_output=True,text=True,timeout=90)
             assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
-            assert report.is_file(),('原生进程未生成验收报告',result.returncode,result.stdout,result.stderr)
+            assert report.is_file(),('Native process did not generate an acceptance report',result.returncode,result.stdout,result.stderr)
             data=json.loads(report.read_text());value=data['result']
             for key in ['ok','wasm','embeddedApp','fontsReady','visible','persisted','isolated','range','parentBlocked','networkBlocked','nativeDenied','tokenAbsent']:
                 assert value[key] is True,(key,data)
@@ -34,8 +34,8 @@ def main():
             assert value['sandbox']=='allow-scripts',data
             reports.append(data)
             if args.report:args.report.with_name(args.report.stem+f'-run-{run+1}.json').write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-            print('运行时读取统计：'+json.dumps(value.get('runtimeStats',{}),ensure_ascii=False),flush=True)
-            print(f'PASS 原生启动 {run+1}：{data["platform"]} / WebView {data["webview"]}，书页、字体、WASM、Range、隔离与持久保存',flush=True)
+            print('Runtime read statistics: '+json.dumps(value.get('runtimeStats',{}),ensure_ascii=False),flush=True)
+            print(f'PASS Native launch {run+1}: {data["platform"]} / WebView {data["webview"]}; document, fonts, WASM, Range, isolation and persistence',flush=True)
         assert reports[0]['result']['rootHash']==reports[1]['result']['rootHash']
     if args.report:args.report.write_text(json.dumps(dict(status='passed',runs=reports),ensure_ascii=False,indent=2)+'\n')
 

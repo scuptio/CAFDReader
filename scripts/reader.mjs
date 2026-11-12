@@ -11,33 +11,33 @@ export const root=fileURLToPath(new URL('../',import.meta.url));
 const require=createRequire(import.meta.url);
 const platforms=['linux','windows','macos','web','android','ios'];
 export const hostPlatform=system=>({linux:'linux',win32:'windows',darwin:'macos'})[system];
-const usage=`用法：cargo make reader [platform] [--plan [--json]] [--dev | --release] [-- Tauri 参数]
-平台：linux、windows、macos、web、android、ios；省略时使用本机桌面平台。
-示例：cargo make reader linux
+const usage=`Usage: cargo make reader [platform] [--plan [--json]] [--dev | --release] [-- Tauri arguments]
+Platforms: linux, windows, macos, web, android, ios; defaults to the host desktop.
+Examples: cargo make reader linux
       cargo make reader android --plan
       cargo make reader linux -- --bundles deb
-桌面默认构建未签名验证包；Android 默认 aarch64 调试 APK；iOS 默认本机架构模拟器。
-Android 正式 APK：cargo make reader android --release（签名须另行配置）。
-web 输出 dist-host；预览用 python3 -m http.server 8611 --directory dist-host。
-环境检查：cargo make doctor [platform]；开发模式：cargo make dev [platform]。`;
+Defaults: unsigned desktop packages; Android aarch64 debug APK; iOS simulator for the host architecture.
+Android release APK: cargo make reader android --release (configure signing separately).
+Web output: dist-host; preview with python3 -m http.server 8611 --directory dist-host.
+Toolchain check: cargo make doctor [platform]; development mode: cargo make dev [platform].`;
 
 export function parseOptions(argv,system=process.platform){
   const separator=argv.indexOf('--'),head=separator<0?[...argv]:argv.slice(0,separator),tail=separator<0?[]:argv.slice(separator+1);
   const take=flag=>{const found=head.includes(flag);for(let i=head.length-1;i>=0;i--)if(head[i]===flag)head.splice(i,1);return found;};
   const plan=take('--plan'),json=take('--json'),dev=take('--dev'),release=take('--release'),doctor=take('--doctor'),help=take('--help')||take('-h');
   const platform=head[0]&&!head[0].startsWith('-')?head.shift():hostPlatform(system);
-  if(!help&&!platforms.includes(platform))throw Error(`不支持的平台：${platform??system}。可用：${platforms.join('、')}`);
-  if(release&&(platform!=='android'||dev||doctor))throw Error('--release 仅用于 Android 正式构建，不能与 --dev / --doctor 一起使用。');
-  if(release&&[...head,...tail].includes('--debug'))throw Error('--release 不能与 --debug 一起使用。');
+  if(!help&&!platforms.includes(platform))throw Error(`Unsupported platform: ${platform??system}. Available: ${platforms.join(', ')}`);
+  if(release&&(platform!=='android'||dev||doctor))throw Error('--release is only supported for Android builds and cannot be combined with --dev / --doctor.');
+  if(release&&[...head,...tail].includes('--debug'))throw Error('--release cannot be combined with --debug.');
   return {platform,plan,json,dev,release,doctor,help,extra:[...head,...tail]};
 }
 
 export function buildPlan(options,{system=process.platform,arch=process.arch,generated=p=>existsSync(resolve(root,p))}={}){
   const {platform,dev,release,extra=[]}=options,current=hostPlatform(system);
-  if(!options.plan&&['linux','windows','macos'].includes(platform)&&platform!==current)throw Error(`${platform} 桌面包须在 ${platform} 系统构建；当前为 ${current??system}。`);
-  if(!options.plan&&platform==='ios'&&system!=='darwin')throw Error('iOS 构建须在配有 Xcode 的 macOS 上执行。');
+  if(!options.plan&&['linux','windows','macos'].includes(platform)&&platform!==current)throw Error(`${platform} desktop packages must be built on ${platform}; current host: ${current??system}.`);
+  if(!options.plan&&platform==='ios'&&system!=='darwin')throw Error('iOS builds require macOS with Xcode.');
   if(platform==='web'){
-    if(dev||extra.length)throw Error('web 使用 cargo make reader web 构建，预览请运行静态 HTTP 服务。');
+    if(dev||extra.length)throw Error('Build web with cargo make reader web; preview using a static HTTP server.');
     return [{kind:'host',args:[]}];
   }
   if(platform==='android'||platform==='ios'){
@@ -57,13 +57,13 @@ export function buildPlan(options,{system=process.platform,arch=process.arch,gen
 
 function tauriCli(){
   let path;
-  try{path=require.resolve('@tauri-apps/cli/package.json');}catch{throw Error('缺少本地 Tauri CLI，请先在项目根目录执行 npm ci。');}
+  try{path=require.resolve('@tauri-apps/cli/package.json');}catch{throw Error('Local Tauri CLI not found; run npm ci in the project root first.');}
   const metadata=JSON.parse(readFileSync(path,'utf8'));
   return resolve(dirname(path),typeof metadata.bin==='string'?metadata.bin:metadata.bin.tauri);
 }
 function execute(command,args){
   const result=spawnSync(command,args,{cwd:root,stdio:'inherit',env:{...process.env,PYTHONUTF8:'1'}});
-  if(result.error)throw Error(`无法启动 ${command}：${result.error.message}`);
+  if(result.error)throw Error(`Unable to start ${command}: ${result.error.message}`);
   if(result.status!==0){process.exitCode=result.status??1;return false;}
   return true;
 }
@@ -79,12 +79,12 @@ function findFile(directory,name){
 export function repairAndroidProject(projectRoot=root){
   const android=resolve(projectRoot,'src-tauri/gen/android');
   const task=findFile(resolve(android,'buildSrc/src/main'),'BuildTask.kt');
-  if(!task)throw Error('Android 工程缺少 BuildTask.kt，请重新运行 android init。');
+  if(!task)throw Error('Android project is missing BuildTask.kt; run android init again.');
   const marker='val args = listOf("tauri", "android", "android-studio-script");';
   const replacement='val cli = File(projectDir, "$rootDirRel/../node_modules/@tauri-apps/cli/tauri.js").canonicalPath\n        val args = listOf(cli, "android", "android-studio-script");';
   const source=readFileSync(task,'utf8');
   if(source.includes(marker))writeFileSync(task,source.replace(marker,replacement));
-  else if(!source.includes('node_modules/@tauri-apps/cli/tauri.js'))throw Error('无法识别 Android BuildTask.kt 的 Tauri CLI 调用。');
+  else if(!source.includes('node_modules/@tauri-apps/cli/tauri.js'))throw Error('Unrecognized Tauri CLI invocation in Android BuildTask.kt.');
   const properties=resolve(android,'gradle.properties');
   const value=readFileSync(properties,'utf8');
   if(!/^kotlin\.incremental=false$/m.test(value))writeFileSync(properties,value.replace(/\s*$/,'')+'\n\n# Tauri dependencies and this project may reside on different Windows drives.\nkotlin.incremental=false\n');
@@ -95,18 +95,18 @@ function executable(name){
   return (process.env.PATH||'').split(delimiter).some(dir=>extensions.some(ext=>existsSync(join(dir,name+ext))));
 }
 export function doctor(platform){
-  heading('阅读器环境检查',`平台 ${platform} · 只读检查`);
+  heading('Reader toolchain check',`Platform ${platform} · Read-only check`);
   let missing=0,total=0;
-  const report=(name,ok,detail='')=>{status(ok?'通过':'缺少',name+(detail?' · '+detail:''),ok?'ok':'error');total++;if(!ok)missing++;};
+  const report=(name,ok,detail='')=>{status(ok?'Passed':'Missing',name+(detail?' · '+detail:''),ok?'ok':'error');total++;if(!ok)missing++;};
   report('Node.js 24+',Number(process.versions.node.split('.')[0])>=24,process.version);
   for(const name of ['npm','cargo','rustc','cargo-make'])report(name,executable(name));
-  try{report('本地 Tauri CLI',existsSync(tauriCli()));}catch(error){report('本地 Tauri CLI',false,error.message);}
+  try{report('Local Tauri CLI',existsSync(tauriCli()));}catch(error){report('Local Tauri CLI',false,error.message);}
   const probe=(name,args)=>{const r=spawnSync(name,args,{cwd:root,encoding:'utf8'});return !r.error&&r.status===0&&!!(r.stdout||r.stderr).trim();};
   if(platform==='linux'){
     for(const library of ['gtk+-3.0','webkit2gtk-4.1'])report(library,probe('pkg-config',['--modversion',library]));
   }
   if(platform==='macos'||platform==='ios')report('Xcode',probe('xcode-select',['-p'])&&probe('xcrun',['--find','clang']));
-  if(platform==='windows')console.log('平台要求：MSVC C++ 构建工具与 WebView2；安装状态需在 Windows 环境确认。');
+  if(platform==='windows')console.log('Platform requirements: MSVC C++ Build Tools and WebView2; verify installation on Windows.');
   if(platform==='android'){
     const java=spawnSync('java',['-version'],{encoding:'utf8'}),version=(java.stderr||java.stdout||'').match(/version "(\d+)/)?.[1];
     report('Java 21+',!java.error&&java.status===0&&Number(version)>=21);
@@ -115,48 +115,48 @@ export function doctor(platform){
     report('Android NDK',!!process.env.NDK_HOME&&existsSync(process.env.NDK_HOME),'NDK_HOME');
   }
   console.log();
-  status(missing?'未通过':'通过',`${total-missing}/${total} 项检查通过${missing?`，缺少 ${missing} 项`:''}`,missing?'error':'ok');
-  console.log(paint('  目标 SDK、Rust target 与签名配置由 Tauri 构建继续校验。','2'));
+  status(missing?'Failed':'Passed',`${total-missing}/${total} checks passed${missing?`, ${missing} missing`:''}`,missing?'error':'ok');
+  console.log(paint('  Tauri will also validate the target SDK, Rust target and signing configuration during the build.','2'));
   return missing===0;
 }
 
 const outputPath=platform=>({linux:'src-tauri/target/release/bundle/',windows:'src-tauri/target/release/bundle/',macos:'src-tauri/target/release/bundle/',web:'dist-host/',android:'src-tauri/gen/android/app/build/outputs/',ios:'src-tauri/gen/apple/build/'})[platform];
 const stepCommand=step=>step.kind==='host'?['node','scripts/build_host.mjs']:['tauri',...step.args];
 function showPlan(options,plan){
-  heading('阅读器构建计划',`平台 ${options.platform} · ${options.dev?'开发模式':'构建模式'} · 仅预览`);
+  heading('Reader build plan',`Platform ${options.platform} · ${options.dev?'Development':'Build'} · Preview only`);
   plan.forEach((step,index)=>{
-    status(`${index+1}/${plan.length}`,step.kind==='host'?'构建静态宿主':step.args[1]==='init'?'初始化移动工程':options.dev?'启动开发版':'构建阅读器');
+    status(`${index+1}/${plan.length}`,step.kind==='host'?'Build static host':step.args[1]==='init'?'Initialize mobile project':options.dev?'Start development reader':'Build reader');
     console.log(paint('       '+commandLine(stepCommand(step)),'2'));
   });
   console.log();
-  if(!options.dev)status('默认目录',outputPath(options.platform));
-  console.log(paint('  此计划未执行构建；实际构建须满足对应平台环境。','2'));
+  if(!options.dev)status('Output',outputPath(options.platform));
+  console.log(paint('  This plan does not run a build; actual builds require the platform toolchain.','2'));
 }
 
 export function main(argv=process.argv.slice(2)){
   const options=parseOptions(argv);
   if(options.help){console.log(usage);return;}
-  if(options.json&&!options.plan)throw Error('--json 须与 --plan 一起使用。');
+  if(options.json&&!options.plan)throw Error('--json requires --plan.');
   if(options.platform==='android'&&!options.plan)loadAndroidEnvironment(root);
   if(options.doctor){
-    if(options.extra.length||options.dev||options.plan)throw Error('doctor 只接受一个可选平台名。');
+    if(options.extra.length||options.dev||options.plan)throw Error('doctor accepts only one optional platform name.');
     buildPlan({...options,extra:[]});
     if(!doctor(options.platform))process.exitCode=1;return;
   }
   const plan=buildPlan(options);
   if(options.plan){if(options.json)console.log(JSON.stringify({platform:options.platform,mode:options.dev?'dev':'build',steps:plan},null,2));else showPlan(options,plan);return;}
-  heading('CAFD 阅读器',`平台 ${options.platform} · ${options.dev?'开发模式':'构建模式'}`);
+  heading('CAFD Reader',`Platform ${options.platform} · ${options.dev?'Development':'Build'}`);
   const started=Date.now();
   for(const [index,step] of plan.entries()){
     if(options.platform==='android'&&step.kind==='tauri'&&step.args[0]==='android'&&['build','dev'].includes(step.args[1]))repairAndroidProject();
     status(`${index+1}/${plan.length}`,commandLine(stepCommand(step)));
     const args=step.kind==='host'?[resolve(root,'scripts/build_host.mjs')]:[tauriCli(),...step.args];
-    if(!execute(process.execPath,args)){status('失败',`步骤 ${index+1}/${plan.length} · 退出码 ${process.exitCode} · ${duration(Date.now()-started)}`,'error',process.stderr);return;}
+    if(!execute(process.execPath,args)){status('Failed',`Step ${index+1}/${plan.length} · Exit code ${process.exitCode} · ${duration(Date.now()-started)}`,'error',process.stderr);return;}
     if(options.platform==='android'&&step.kind==='tauri'&&step.args[0]==='android'&&step.args[1]==='init')repairAndroidProject();
   }
-  console.log();status('完成',`${options.platform} · ${duration(Date.now()-started)}`,'ok');
-  if(!options.dev)status('默认目录',outputPath(options.platform));
+  console.log();status('Finished',`${options.platform} · ${duration(Date.now()-started)}`,'ok');
+  if(!options.dev)status('Output',outputPath(options.platform));
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  try{main();}catch(error){status('错误',error.message,'error',process.stderr);process.exitCode=1;}
+  try{main();}catch(error){status('Error',error.message,'error',process.stderr);process.exitCode=1;}
 }

@@ -1,6 +1,6 @@
 # CAFD Reader 项目规则
 
-本仓库维护通用 CAFD Reader、CAFD 1.0.0 规范与兼容测试。不得依赖任何内容项目的目录、PDF、编辑数据、WASM 构建产物。
+本仓库维护通用 CAFD Reader、CAFD 1.0.0-draft.1 规范与兼容测试。不得依赖任何内容项目的目录、PDF、编辑数据、WASM 构建产物。
 
 - `web/` 是薄宿主：文档架、打开/关闭、元信息、受控资源/WASM/存储桥接，不加入正文分页、注释、翻译、影印等内容业务。
 - `src-tauri/` 负责跨平台文件、协议、书架与私有记录。应用 identifier `org.caf.reader`、cafbook/cafcover 与存储键保持兼容。

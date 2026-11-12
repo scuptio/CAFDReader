@@ -13,5 +13,5 @@ fn main() {
             "smoke_result",
         ]),
     ))
-    .expect("跨平台宿主构建配置无效");
+    .expect("Invalid cross-platform host build configuration");
 }

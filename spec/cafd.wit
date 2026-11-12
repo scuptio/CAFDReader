@@ -1,4 +1,4 @@
-package caf:doc@1.0.0;
+package caf:doc@1.0.0-draft.1;
 
 /// Document capability: table of contents, segment fetch, paging window, in-book search.
 /// All complex values are packed per caf-abi (this profile uses UTF-8 JSON encoding).
@@ -22,6 +22,6 @@ interface doc {
   entity: func(id: string) -> string;
 }
 
-world ebook-reader {
+world cafd-reader {
   export doc;
 }

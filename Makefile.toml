@@ -9,76 +9,76 @@ min_version = "0.37.24"
 alias = "help"
 
 [tasks.help]
-description = "列出项目任务；阅读器：cargo make reader [platform] [--plan]"
-category = "帮助"
+description = "List project tasks; reader: cargo make reader [platform] [--plan]"
+category = "Help"
 command = "node"
 args = ["scripts/python.mjs", "--cargo-make", "scripts/show_tasks.py", "${@}"]
 
 [tasks.doctor]
-description = "只读检查阅读器工具链：doctor [platform]"
-category = "帮助"
+description = "Check the reader toolchain without changes: doctor [platform]"
+category = "Help"
 command = "node"
 args = ["scripts/reader.mjs", "--doctor", "${@}"]
 
 [tasks.setup-android]
-description = "安装配置 Android 环境（Ubuntu/Windows x64）；--plan 预览，--yes 接受 SDK 许可证"
-category = "开发"
+description = "Set up Android tools (Ubuntu/Windows x64); --plan previews, --yes accepts SDK licenses"
+category = "Development"
 command = "node"
 args = ["scripts/python.mjs", "--cargo-make", "scripts/setup_android.py", "${@}"]
 
 [tasks.reader]
-description = "构建阅读器：reader [linux|windows|macos|web|android|ios]；省略为本机桌面"
-category = "构建"
+description = "Build the reader: reader [linux|windows|macos|web|android|ios]; defaults to the host desktop"
+category = "Build"
 command = "node"
 args = ["scripts/reader.mjs", "${@}"]
 
 [tasks.build]
-description = "reader 的兼容别名，默认构建当前平台阅读器"
-category = "构建"
+description = "Alias for reader; builds for the host desktop by default"
+category = "Build"
 alias = "reader"
 
 [tasks.dev]
-description = "启动阅读器开发版：dev [platform]；web 请使用静态 HTTP 服务"
-category = "开发"
+description = "Start the development reader: dev [platform]; use static HTTP for web"
+category = "Development"
 command = "node"
 args = ["scripts/reader.mjs", "--dev", "${@}"]
 
 
 [tasks.test-unit]
-description = "协议、平台路由与 Web 模块边界检查"
-category = "测试"
+description = "Check protocols, platform routing and Web module boundaries"
+category = "Test"
 command = "node"
 args = ["scripts/test.mjs", "unit", "${@}"]
 
 [tasks.test-rust]
 dependencies = ["build-web"]
-description = "原生宿主 Rust 测试"
-category = "测试"
+description = "Run native host Rust tests"
+category = "Test"
 command = "cargo"
 args = ["test", "--manifest-path", "src-tauri/Cargo.toml", "--locked", "${@}"]
 
 [tasks.test]
-description = "顺序执行基础检查和原生 Rust 测试"
-category = "测试"
+description = "Run basic checks and native Rust tests in sequence"
+category = "Test"
 dependencies = ["test-unit", "test-rust"]
 
 
 
 [tasks.test-browser]
-description = "浏览器回归，需要静态 HTTP 与 Chrome；支持 --case"
-category = "测试"
+description = "Run browser regression tests; requires static HTTP and Chrome"
+category = "Test"
 command = "node"
 args = ["scripts/test.mjs", "browser", "${@}"]
 
 [tasks.test-native]
-description = "原生 WebView 重开验证，传入 --binary、--book、--report"
-category = "测试"
+description = "Verify native WebView reopening; accepts --binary, --book and --report"
+category = "Test"
 command = "node"
 args = ["scripts/python.mjs", "--cargo-make", "scripts/test_native_reader.py", "${@}"]
 
 [tasks.fixtures]
-description = "重建独立协议夹具，需要 rustc wasm target 和 CAF_TOOL"
-category = "开发"
+description = "Rebuild independent protocol fixtures; requires the rustc WASM target and CAF_TOOL"
+category = "Development"
 command = "node"
 args = ["scripts/python.mjs", "--cargo-make", "scripts/build_fixtures.py", "${@}"]
 

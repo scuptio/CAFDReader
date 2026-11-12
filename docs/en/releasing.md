@@ -2,7 +2,9 @@
 
 > English | [简体中文](../zh-CN/releasing.md)
 
-The program version uses SemVer, currently `0.1.0`; later official releases bump it, e.g. `0.1.1`. Each build's Release uses its own UTC time-based number; no fourth numeric segment is appended to the program version. The CAFD spec version is maintained independently, currently `1.0.0`.
+The current specification is **1.0.0-draft.1 (unstable draft)**. It is not finalized and does not promise backward compatibility between drafts; fields, component names, worlds, ABI, and protocol conventions may change. Program and specification versions are maintained independently.
+
+The program version uses SemVer, currently `0.1.0`; later official releases bump it, e.g. `0.1.1`. Each build's Release uses its own UTC time-based number; no fourth numeric segment is appended to the program version. The CAFD spec version is maintained independently, currently `1.0.0-draft.1`.
 
 | Purpose | Example |
 | --- | --- |

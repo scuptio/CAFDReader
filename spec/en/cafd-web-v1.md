@@ -1,14 +1,16 @@
 # caf:doc-web@1
 
-> English | [简体中文](../zh-CN/ebook-web-v1.md)
+> English | [简体中文](../zh-CN/cafd-web-v1.md)
 
-Spec version 1.0.0. The current reading-document profile is caf:doc@1; the WASM data interface is provided by the document — the host interprets neither layout nor chapters.
+The current specification is **1.0.0-draft.1 (unstable draft)**. It is not finalized and does not promise backward compatibility between drafts; fields, component names, worlds, ABI, and protocol conventions may change. Program and specification versions are maintained independently.
+
+Spec version 1.0.0-draft.1. The current reading-document profile is caf:doc@1; the WASM data interface is provided by the document — the host interprets neither layout nor chapters.
 
 ## Discovery and mount
 
 info() returns JSON metadata; the web_app_manifest field points to /app/manifest.json.
 Manifest shape:
-  {"protocol":"caf:doc-web@1","component":"ebook","entry":"/app/index.html",
+  {"protocol":"caf:doc-web@1","component":"cafd","entry":"/app/index.html",
    "methods":["info","toc","get","window","search","lookup","entity"],"sources":{...}}
 The v1 HTML entry is self-contained in scripts and styles: no remote scripts, no external stylesheets, no nested frames.
 The host reads the metadata, manifest, and HTML after CAF Worker verification; unknown protocols or invalid paths are refused a mount.

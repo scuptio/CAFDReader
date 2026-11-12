@@ -1,4 +1,4 @@
-"""安装 Ubuntu / Windows x64 的 Android 构建依赖，配置仅保存在本项目 build/。"""
+"""Set up Android build dependencies on Ubuntu / Windows x64; configuration is stored in this project under build/."""
 import argparse
 import hashlib
 import json
@@ -41,7 +41,7 @@ def windows_batch_command(args, comspec='cmd.exe'):
     # cmd.exe 不使用 POSIX 或 CreateProcess 的转义规则；所有参数加双引号，
     # 拒绝仍会展开的百分号和无法安全嵌入的引号/换行，关闭 delayed expansion。
     if any(any(c in str(arg) for c in '"%\r\n') for arg in [comspec, *args]):
-        raise ValueError('Windows 批处理路径/参数不能包含双引号、百分号或换行')
+        raise ValueError('Windows batch paths/arguments cannot contain double quotes, percent signs or newlines')
     return f'"{comspec}" /d /v:off /s /c "' + ' '.join('"' + str(a) + '"' for a in args) + '"'
 
 
@@ -94,7 +94,7 @@ def install_system(host):
     else:
         def winget(args):
             if not shutil.which('winget'):
-                raise RuntimeError('需要 Windows App Installer 提供的 winget；安装后重新运行。')
+                raise RuntimeError('winget from Windows App Installer is required; install it and rerun.')
             run(['winget', 'install', *args, *common])
 
         common = ['--exact', '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements']
@@ -119,10 +119,10 @@ def checked_extract(archive, directory):
             parts = item.filename.replace('\\', '/').split('/')
             mode = item.external_attr >> 16
             if item.filename.startswith(('/', '\\')) or ':' in parts[0] or '..' in parts or stat.S_ISLNK(mode):
-                raise ValueError('SDK 压缩包包含不安全路径：' + item.filename)
+                raise ValueError('Unsafe path in SDK archive: ' + item.filename)
             target = directory.joinpath(*parts)
             if not target.resolve().is_relative_to(directory):
-                raise ValueError('SDK 解压路径越界')
+                raise ValueError('SDK extraction path escapes the destination')
         source.extractall(directory)
         for item in source.infolist():
             path = directory / item.filename
@@ -135,12 +135,12 @@ def download(url, destination, expected):
     request = urllib.request.Request(url, headers={'User-Agent': 'CAFDReader-Android-Setup'})
     with urllib.request.urlopen(request, timeout=120) as incoming, destination.open('wb') as output:
         if not incoming.url.startswith('https://'):
-            raise ValueError('SDK 下载必须使用 HTTPS')
+            raise ValueError('SDK downloads must use HTTPS')
         while data := incoming.read(1024 * 1024):
             output.write(data)
             h.update(data)
     if h.hexdigest() != expected:
-        raise ValueError('Android 命令行工具 SHA-256 不符，未安装')
+        raise ValueError('Android command-line tools SHA-256 mismatch; not installed')
 
 
 def install_cli(host, sdk):
@@ -151,17 +151,17 @@ def install_cli(host, sdk):
     if manager.is_file() and (destination / 'lib').is_dir():
         return manager
     if destination.exists():
-        raise RuntimeError(f'命令行工具目录不完整：{destination}；请移走该目录后重试。')
+        raise RuntimeError(f'Incomplete command-line tools directory: {destination}; move it aside and retry.')
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.cafd-setup-', dir=destination.parent) as folder:
         folder = Path(folder)
         archive = folder / 'tools.zip'
-        print('下载并校验：' + config[host]['url'], flush=True)
+        print('Download and verify: ' + config[host]['url'], flush=True)
         download(config[host]['url'], archive, config[host]['sha256'])
         checked_extract(archive, folder / 'unpacked')
         extracted = folder / 'unpacked/cmdline-tools'
         if not (extracted / 'bin' / executable).is_file() or not (extracted / 'lib').is_dir():
-            raise ValueError('SDK 命令行工具压缩包结构无效')
+            raise ValueError('Invalid SDK command-line tools archive layout')
         extracted.rename(destination)
     return manager
 
@@ -192,59 +192,59 @@ def write_environment(settings):
 
 
 def print_plan(host, sdk, skip_system, skip_npm):
-    print('Android 环境安装计划（不执行安装或写入）')
-    print('平台：' + ('Ubuntu x64' if host == 'linux' else 'Windows x64'))
-    print('前提：Node.js 24+、Python 3.11+、Rust/rustup、cargo-make 0.37.24+')
+    print('Android setup plan (no installation or writes)')
+    print('Platform: ' + ('Ubuntu x64' if host == 'linux' else 'Windows x64'))
+    print('Prerequisites: Node.js 24+, Python 3.11+, Rust/rustup, cargo-make 0.37.24+')
     if not skip_system:
-        print('系统依赖：' + ('apt-get install ' + ' '.join(APT_PACKAGES) if host == 'linux' else 'winget：Temurin 21 JDK、Visual Studio 2022 C++ Build Tools（缺少时安装）'))
-    print('Android SDK：' + str(sdk))
-    print('下载：' + TOOLCHAIN['command_line_tools'][host]['url'])
-    print('SHA-256：' + TOOLCHAIN['command_line_tools'][host]['sha256'])
-    print('sdkmanager --licenses；sdkmanager ' + ' '.join(packages()))
+        print('System dependencies: ' + ('apt-get install ' + ' '.join(APT_PACKAGES) if host == 'linux' else 'winget: Temurin 21 JDK, Visual Studio 2022 C++ Build Tools (install if missing)'))
+    print('Android SDK: ' + str(sdk))
+    print('Download: ' + TOOLCHAIN['command_line_tools'][host]['url'])
+    print('SHA-256: ' + TOOLCHAIN['command_line_tools'][host]['sha256'])
+    print('sdkmanager --licenses; sdkmanager ' + ' '.join(packages()))
     print('rustup target add ' + ' '.join(TOOLCHAIN['rust_targets']))
     if not skip_npm:
         print('npm ci')
-    print('项目配置：build/android-env.json；后续 cargo make reader android 自动加载')
+    print('Project configuration: build/android-env.json; loaded automatically by cargo make reader android')
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--plan', action='store_true', help='只显示计划，不下载、不安装、不写入')
-    parser.add_argument('--platform', choices=['ubuntu', 'windows'], help='仅 --plan 可预览其他平台')
-    parser.add_argument('--sdk-root', help='SDK 安装目录，默认复用 ANDROID_HOME 或用户 SDK 目录')
-    parser.add_argument('--yes', action='store_true', help='自动接受 SDK 许可证（适用于 CI）')
-    parser.add_argument('--skip-system', action='store_true', help='复用已安装的 JDK 和系统构建工具')
-    parser.add_argument('--skip-npm', action='store_true', help='跳过 npm ci')
+    parser.add_argument('--plan', action='store_true', help='Show the plan without downloading, installing or writing files')
+    parser.add_argument('--platform', choices=['ubuntu', 'windows'], help='Preview another platform with --plan only')
+    parser.add_argument('--sdk-root', help='SDK directory; defaults to ANDROID_HOME or the user SDK directory')
+    parser.add_argument('--yes', action='store_true', help='Accept SDK licenses automatically (for CI)')
+    parser.add_argument('--skip-system', action='store_true', help='Reuse the installed JDK and system build tools')
+    parser.add_argument('--skip-npm', action='store_true', help='Skip npm ci')
     args = parser.parse_args(argv)
     if sys.version_info < (3, 11):
-        parser.error('需要 Python 3.11 或以上')
+        parser.error('Python 3.11 or newer is required')
     host = {'ubuntu': 'linux', 'windows': 'win32'}.get(args.platform, sys.platform)
     if host not in {'linux', 'win32'}:
-        parser.error('只支持 Ubuntu / Windows x64')
+        parser.error('Only Ubuntu / Windows x64 is supported')
     if args.platform and not args.plan:
-        parser.error('--platform 只用于 --plan；实际安装自动识别本机系统')
+        parser.error('--platform requires --plan; installation detects the host automatically')
     sdk = sdk_location(host, args.sdk_root, {} if host != sys.platform else None)
     if args.plan:
         print_plan(host, sdk, args.skip_system, args.skip_npm)
         return
     if platform.machine().lower() not in {'x86_64', 'amd64'}:
-        raise RuntimeError('当前锁定的 Android 工具仅支持 x64 构建主机')
+        raise RuntimeError('The pinned Android tools only support x64 build hosts')
     if host == 'linux':
         release = platform.freedesktop_os_release()
         if release.get('ID') != 'ubuntu' or tuple(map(int, release.get('VERSION_ID', '0').split('.'))) < (22, 4):
-            raise RuntimeError('Linux 安装仅支持 Ubuntu 22.04 及以上')
+            raise RuntimeError('Linux setup only supports Ubuntu 22.04 or newer')
     for executable in ['node', 'rustup', 'cargo']:
         if not shutil.which(executable):
-            raise RuntimeError(f'缺少基础工具 {executable}；请先按 README 安装项目基础工具链')
+            raise RuntimeError(f'Missing prerequisite {executable}; install the base toolchain as described in README')
     if int(run(['node', '-p', 'process.versions.node.split(".")[0]'], capture=True).stdout.strip()) < 24:
-        raise RuntimeError('需要 Node.js 24 或以上')
+        raise RuntimeError('Node.js 24 or newer is required')
     if not args.skip_system:
         install_system(host)
     jdk = java_home(host)
     if not jdk:
-        raise RuntimeError('未找到 Java 21 JDK；检查 JAVA_HOME 或重新运行系统依赖安装')
+        raise RuntimeError('Java 21 JDK not found; check JAVA_HOME or rerun system dependency setup')
     if host == 'win32' and not visual_studio():
-        raise RuntimeError('未检测到 MSVC C++ Build Tools；若安装提示重启，请重启后重试')
+        raise RuntimeError('MSVC C++ Build Tools not found; reboot and retry if requested by the installer')
     sdk = Path(sdk).expanduser().resolve()
     manager = install_cli(host, sdk)
     settings = environment(host, sdk, jdk)
@@ -257,20 +257,20 @@ def main(argv=None):
         # Windows 的批处理参数统一由 run() 处理。
         npm = shutil.which('npm.cmd' if host == 'win32' else 'npm', path=env['PATH'])
         if not npm:
-            raise RuntimeError('缺少 npm，请检查 Node.js 安装')
+            raise RuntimeError('npm not found; check the Node.js installation')
         run([npm, 'ci'], env=env)
     expected = [sdk / 'platforms' / TOOLCHAIN['platform'] / 'android.jar',
                 sdk / 'build-tools' / TOOLCHAIN['build_tools'] / ('aapt2.exe' if host == 'win32' else 'aapt2'),
                 sdk / 'ndk' / TOOLCHAIN['ndk'] / 'source.properties']
     if any(not p.is_file() for p in expected):
-        raise RuntimeError('SDK 包安装不完整，未保存项目环境；请重新运行安装任务')
+        raise RuntimeError('SDK packages are incomplete; project environment was not saved. Rerun setup')
     write_environment(settings)
-    print('Android 构建环境已配置。下一步：cargo make doctor android；cargo make reader android')
+    print('Android build environment configured. Next: cargo make doctor android; cargo make reader android')
 
 
 if __name__ == '__main__':
     try:
         main()
     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError, zipfile.BadZipFile) as error:
-        print('Android 环境配置失败：' + str(error), file=sys.stderr)
+        print('Android setup failed: ' + str(error), file=sys.stderr)
         sys.exit(1)

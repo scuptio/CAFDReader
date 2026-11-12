@@ -2,6 +2,8 @@
 
 > [English](README.md) | 简体中文
 
+当前规范为 **1.0.0-draft.1（不稳定草案）**，尚未定版，不承诺草案之间向后兼容；字段、组件名、world、ABI 和协议约定仍可能调整。程序版本与规范版本独立维护。
+
 [![Reader Release](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml)
 
 CAFD（CAF Document，`.cafd`）交互文档的跨平台薄宿主。支持符合当前阅读 profile 的文档，不承诺打开所有 CAF 文件。内容与排版应用随文档，宿主负责文档架、文件、元信息和受限桥接。CAFD 是建立在 [CAF](https://github.com/ybbh/caf) 容器格式之上的文档 profile。
@@ -16,7 +18,11 @@ python3 -m http.server 8612 --bind 127.0.0.1 --directory dist-host
 
 浏览器打开 <http://127.0.0.1:8612/reader/>,点击「打开 .cafd」选择本地文件,或直接把文件拖入窗口。
 
+书架和阅读器的顶部「设置与帮助」菜单提供「中文 / English」界面语言设置，以及「关于阅读器」窗口，显示程序版本、实现对应的 CAFD 规范版本与稳定状态、容器格式、文档能力和应用协议。语言选择保存在本地；切换时保留当前打开的文档，不翻译文档内应用。版本信息在构建时从程序与规范版本记录自动生成。手机端使用右上角更多菜单，控件增大触控区域，「关于阅读器」以底部面板打开。
+
 ## 构建与运行
+
+`cargo make` 的项目任务说明、进度、诊断和测试摘要统一使用英文，与阅读器界面语言设置独立。
 
 需要 Node.js 24、Python 3.11+、Rust 和对应平台 SDK。Linux 需 GTK 3、WebKitGTK 4.1 开发库；Windows 需 MSVC 与 WebView2；macOS/iOS 需 Xcode；Android 需 Java 21、SDK、NDK。
 
@@ -65,14 +71,14 @@ cargo make fixtures -- --caf-tool /path/to/caf-tool
 
 ## 规范和产物
 
-- [CAFD 1.0.0](spec/zh-CN/CAFD.md)
-- [应用桥接协议](spec/zh-CN/ebook-web-v1.md)
+- [CAFD 1.0.0-draft.1](spec/zh-CN/CAFD.md)
+- [应用桥接协议](spec/zh-CN/cafd-web-v1.md)
 - [实现兼容](docs/zh-CN/compatibility.md)
 - [CAF 浏览器运行时](docs/zh-CN/runtime.md)
 
 `cargo make reader web` 生成确定性的 dist-host/release.json（软件/规范版本及文件哈希）。部署到内容站点时使用固定清单及校验后的产物，覆盖站点宿主文件，保留其 books/catalog.json 与内容文件。安装包不包含作品。
 
-规范与阅读器版本独立维护；目前程序为 0.1.0，规范为 1.0.0。CI 仅保留 `Reader Release`，手动运行或推送 `v*` 正式版本标签后，构建 Windows x64 安装包、Ubuntu x64 `.deb` 和 Android ARM64 未签名正式 APK，汇总为 Release 草稿。工作流不执行签名，不需要签名 Secrets；Android APK 需另行签名后才能安装。每次构建统一生成 UTC 标签，例如 `build-20261110T073000Z`，标题为 `CAFD Reader 0.1.0 · 20261110T073000Z`；正式版本升级仍递增程序版本。不发布 iOS。发布步骤见 [发布说明](docs/zh-CN/releasing.md)。构建与测试不依赖外部内容仓库。
+规范与阅读器版本独立维护；目前程序为 0.1.0，规范为 1.0.0-draft.1。CI 仅保留 `Reader Release`，手动运行或推送 `v*` 正式版本标签后，构建 Windows x64 安装包、Ubuntu x64 `.deb` 和 Android ARM64 未签名正式 APK，汇总为 Release 草稿。工作流不执行签名，不需要签名 Secrets；Android APK 需另行签名后才能安装。每次构建统一生成 UTC 标签，例如 `build-20261110T073000Z`，标题为 `CAFD Reader 0.1.0 · 20261110T073000Z`；正式版本升级仍递增程序版本。不发布 iOS。发布步骤见 [发布说明](docs/zh-CN/releasing.md)。构建与测试不依赖外部内容仓库。
 
 ## 大文档读取
 

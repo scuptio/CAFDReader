@@ -1,4 +1,4 @@
-"""从 Makefile.toml 动态显示项目任务，不列出内置钩子。"""
+"""Display project tasks from Makefile.toml without built-in hooks."""
 import os
 import re
 import shutil
@@ -44,12 +44,12 @@ def main():
     rows = [(name, spec) for name, spec in tasks.items() if not spec.get('private') and not spec.get('alias')]
     columns = max(20, min(120, shutil.get_terminal_size((100, 24)).columns))
     label_width = max((width(name) for name, _ in rows), default=0)
-    categories = list(dict.fromkeys(['构建', '开发', '测试', '帮助', *(spec.get('category', '其他') for _, spec in rows)]))
-    for text, style in [('CAFD 项目任务', '1'), ('跨平台阅读器 · 协议 · 独立验证', '2')]:
+    categories = list(dict.fromkeys(['Build', 'Development', 'Test', 'Help', *(spec.get('category', 'Other') for _, spec in rows)]))
+    for text, style in [('CAFD project tasks', '1'), ('Cross-platform reader · Protocols · Independent validation', '2')]:
         for line in wrap(text, columns):
             print(paint(line, style))
     for category in categories:
-        group = [(name, spec) for name, spec in rows if spec.get('category', '其他') == category]
+        group = [(name, spec) for name, spec in rows if spec.get('category', 'Other') == category]
         if not group:
             continue
         print('\n' + paint(category, '1;36'))
@@ -65,18 +65,18 @@ def main():
                 print('  ' + paint(label, '1;32') + '  ' + lines[0])
                 for line in lines[1:]:
                     print(' ' * (label_width + 4) + line)
-    aliases = ['默认 → help' if name == 'default' else f'{name} → {spec["alias"]}' for name, spec in tasks.items() if spec.get('alias') and not spec.get('private')]
+    aliases = ['default → help' if name == 'default' else f'{name} → {spec["alias"]}' for name, spec in tasks.items() if spec.get('alias') and not spec.get('private')]
     print()
-    for line in wrap('别名：' + '；'.join(aliases), columns):
+    for line in wrap('Aliases: ' + '; '.join(aliases), columns):
         print(paint(line, '2'))
-    print('\n' + paint('常用命令', '1'))
+    print('\n' + paint('Common commands', '1'))
     for command in ['cargo make reader [platform]', 'cargo make setup-android -- --plan', 'cargo make reader android --plan', 'cargo make doctor [platform]', 'cargo make test']:
         for line in wrap(command, columns - 2):
             print('  ' + paint(line, '36'))
     print()
-    for line in wrap('平台：linux / windows / macos / web / android / ios；省略平台为本机桌面。', columns):
+    for line in wrap('Platforms: linux / windows / macos / web / android / ios; defaults to the host desktop.', columns):
         print(paint(line, '2'))
-    for line in wrap('完整原始列表：cargo make --list-all-steps', columns):
+    for line in wrap('Full task list: cargo make --list-all-steps', columns):
         print(paint(line, '2'))
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import {t,text} from '../i18n.js';
 // 薄宿主：打开/关闭 CAF、元信息、沙箱挂载及通用能力桥接。
 import {openCafWorker} from './caf.js';
 import {platform} from '../platform.js';
@@ -7,28 +8,28 @@ const decoder=new TextDecoder();
 let active=null;
 let sequence=0;
 
-function closeBook(message='请从书架选书，或打开本地 .cafd 文档。') {
+function closeBook(message='请从书架选书，或打开本地 .cafd 文档。',values={}) {
   sequence++;platform.cancelPending();
   clearExport();
   const session=active;active=null;
   if(session) {clearTimeout(session.mountTimer);if(session.port){session.port.onmessage=null;session.port.close();}session.cancel?.();session.frame?.remove();}
   $('bookFrameSlot').replaceChildren();
   $('bookMeta').replaceChildren();$('bookMetadata').hidden=true;
-  $('btnClose').disabled=true;$('hostTitle').textContent='CAFD 阅读器';
-  $('hostStatus').textContent=message;$('hostStatus').hidden=false;
-  document.title='CAFD 阅读器';
+  $('btnClose').disabled=true;text($('hostTitle'),'CAFD 阅读器');
+  text($('hostStatus'),message,values);$('hostStatus').hidden=false;
+  document.title=t('CAFD 阅读器');
 }
 
 function showMetadata(info,artifact) {
   const box=$('bookMeta');box.replaceChildren();
   for(const [name,value] of [['标题',info.title || artifact.name],['作者',info.author],['版本',artifact.version],['状态',info.quality==='editorial-preview' ? '审校预览' : info.quality],['说明',info.note],['SHA-256',artifact.rootHash]]) {
     if(value===undefined)continue;
-    const term=document.createElement('dt');term.textContent=name;
-    const definition=document.createElement('dd');definition.textContent=String(value);
+    const term=document.createElement('dt');text(term,name);
+    const definition=document.createElement('dd');if(name==='状态'&&value==='审校预览')text(definition,'审校预览');else definition.textContent=String(value);
     box.append(term,definition);
   }
   $('bookMetadata').hidden=false;
-  $('hostTitle').textContent=info.title || artifact.name;
+  delete $('hostTitle').dataset.i18n;$('hostTitle').textContent=info.title || artifact.name;
   document.title=$('hostTitle').textContent;
 }
 
@@ -51,7 +52,7 @@ async function bridgeRequest(session,request) {
   if(request.op==='call') return session.runtime.callPacked(request.method,...callArguments(request.method,request.args,session.manifest));
   if(request.op==='read') return session.runtime.readPayload(resourcePath(request.path,session.runtime.artifact.files));
   if(request.op==='file:export') {
-    const file=exportFile(request.filename,request.text);clearExport();session.exportFile=file;session.exportUrl=URL.createObjectURL(new Blob([file.text],{type:'application/json'}));$('exportSave').href=session.exportUrl;$('exportSave').download=file.filename;$('exportFilename').textContent=file.filename;$('exportPanel').hidden=false;return true;
+    const file=exportFile(request.filename,request.text);clearExport();session.exportFile=file;session.exportUrl=URL.createObjectURL(new Blob([file.text],{type:'application/json'}));$('exportSave').href=session.exportUrl;$('exportSave').download=file.filename;delete $('exportFilename').dataset.i18n;$('exportFilename').textContent=file.filename;$('exportPanel').hidden=false;return true;
   }
   if(request.op==='storage:get') {
     return platform.get(session.runtime.artifact.rootHash,request.key);
@@ -108,28 +109,28 @@ async function openBook(input) {
   closeBook('正在校验并打开 CAFD 文档…');
   const session={id:++sequence,input};active=session;$('btnClose').disabled=false;
   try {
-    const opening=openCafWorker(input,{component:'ebook',requiredCapability:DOCUMENT_CAPABILITY,timeout:15000});session.cancel=()=>opening.terminate();
+    const opening=openCafWorker(input,{component:'cafd',requiredCapability:DOCUMENT_CAPABILITY,timeout:15000});session.cancel=()=>opening.terminate();
     session.runtime=await opening;
     if(active!==session)return;
     session.info=await session.runtime.callPacked('info');
     if(!session.info || typeof session.info!=='object' || session.info.error) throw new Error(session.info?.error || 'Invalid book metadata');
     showMetadata(session.info,session.runtime.artifact);
     session.manifest=await documentManifest(session.runtime,session.info);
-    if(!session.manifest) {$('hostStatus').textContent='此旧 CAF 未提供内置阅读应用；仅可查看元信息，不是完整的 CAFD 交互文档。';return;}
+    if(!session.manifest) {text($('hostStatus'),'此旧 CAF 未提供内置阅读应用；仅可查看元信息，不是完整的 CAFD 交互文档。');return;}
     const html=decoder.decode(await session.runtime.readPayload(session.manifest.entry));
     if(active!==session)return;
-    const frame=document.createElement('iframe');frame.id='bookApp';frame.name='caf-book-app';frame.title=session.info.title || 'CAFD 文档应用';
+    const frame=document.createElement('iframe');frame.id='bookApp';frame.name='caf-book-app';frame.title=session.info.title || t('CAFD 文档应用');
     frame.setAttribute('sandbox','allow-scripts');frame.referrerPolicy='no-referrer';
     session.frame=frame;
     frame.srcdoc=sandboxDocument(html);
     session.mountTimer=setTimeout(()=>{if(active===session && !session.port)closeBook('开卷失败：书内应用连接逾时');},10000);
     $('bookFrameSlot').replaceChildren(frame);
   } catch(error) {
-    if(active===session){closeBook('开卷失败：'+error.message);platform.report({ok:false,error:error.message}).catch(console.error);}
+    if(active===session){closeBook('开卷失败：{error}',{error:error.message});platform.report({ok:false,error:error.message}).catch(console.error);}
   }
 }
 
-$('btnOpen').onclick=async()=>{if(!platform.native){$('fileInput').click();return;}const intent=++sequence;try{const book=await platform.importBook();if(book&&intent===sequence)await openBook(platform.source(book.id));}catch(error){if(intent===sequence)closeBook('导入失败：'+error.message);}};
+$('btnOpen').onclick=async()=>{if(!platform.native){$('fileInput').click();return;}const intent=++sequence;try{const book=await platform.importBook();if(book&&intent===sequence)await openBook(platform.source(book.id));}catch(error){if(intent===sequence)closeBook('导入失败：{error}',{error:error.message});}};
 $('fileInput').onchange=event=>{const file=event.target.files[0];if(file)openBook(file);event.target.value='';};
 $('btnClose').onclick=()=>closeBook();
 document.addEventListener('dragover',e=>e.preventDefault());
@@ -143,12 +144,14 @@ else if(book) {
     const url=new URL(book,new URL('../',location.href));
     if(!['http:','https:'].includes(url.protocol))closeBook('只支持 HTTP(S) 书籍网址，或手动打开本地 CAF。');
     else openBook(url.href);
-  } catch(error) {closeBook('无效书籍网址：'+error.message);}
+  } catch(error) {closeBook('无效书籍网址：{error}',{error:error.message});}
 } else closeBook();
 
 function clearExport(){if(active)active.exportFile=null;if(active?.exportUrl){URL.revokeObjectURL(active.exportUrl);active.exportUrl=null;}$('exportSave').removeAttribute('href');$('exportPanel').hidden=true;}
 $('exportCancel').onclick=clearExport;
-$('exportSave').addEventListener('click',async event=>{if(platform.native){event.preventDefault();try{const file=active?.exportFile;if(file&&await platform.exportJSON(file.filename,file.text))clearExport();}catch(error){$('exportFilename').textContent='保存失败：'+error.message;}return;}const url=active?.exportUrl;setTimeout(()=>{if(active?.exportUrl===url)clearExport();},1000);});
+$('exportSave').addEventListener('click',async event=>{if(platform.native){event.preventDefault();try{const file=active?.exportFile;if(file&&await platform.exportJSON(file.filename,file.text))clearExport();}catch(error){text($('exportFilename'),'保存失败：{error}',{error:error.message});}return;}const url=active?.exportUrl;setTimeout(()=>{if(active?.exportUrl===url)clearExport();},1000);});
 
-async function openedNativeFiles(){if(!platform.native)return;const intent=++sequence;try{const books=await platform.consumeOpened();if(books.length&&intent===sequence)await openBook(platform.source(books.at(-1).id));}catch(error){if(intent===sequence){closeBook('导入失败：'+error.message);await platform.report({ok:false,error:error.message});}}}
+async function openedNativeFiles(){if(!platform.native)return;const intent=++sequence;try{const books=await platform.consumeOpened();if(books.length&&intent===sequence)await openBook(platform.source(books.at(-1).id));}catch(error){if(intent===sequence){closeBook('导入失败：{error}',{error:error.message});await platform.report({ok:false,error:error.message});}}}
 window.addEventListener('caf-native-open',openedNativeFiles);await openedNativeFiles();
+
+window.addEventListener('caf-language-change',()=>{if(!active)document.title=t('CAFD 阅读器');});

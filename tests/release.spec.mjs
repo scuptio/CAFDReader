@@ -16,7 +16,7 @@ const version=source.metadata.version;
 assert.equal(validateVersions(source),version);
 assert.equal(validateVersions(source,`v${version}`),version);
 assert.equal(validateVersions({...source,cargo:source.cargo.replace(/\r?\n/g,'\r\n'),cargoLock:source.cargoLock.replace(/\r?\n/g,'\r\n')},`v${version}`),version);
-for(const tag of [version,'v9.9.9',`v${version}.20261110`])assert.throws(()=>validateVersions(source,tag),/触发标签/);
+for(const tag of [version,'v9.9.9',`v${version}.20261110`])assert.throws(()=>validateVersions(source,tag),/Release trigger tag/);
 const metadata=buildMetadata(version,new Date('2026-11-10T15:30:00.123+08:00'));
 assert.deepEqual(metadata,{version,timestamp:'20261110T073000Z',tag:'build-20261110T073000Z',title:`CAFD Reader ${version} · 20261110T073000Z`});
 assert.deepEqual(metadataFromTag(version,metadata.tag),metadata);
@@ -27,26 +27,26 @@ for(const key of ['lock','tauri','cargo','cargoLock']){
   if(key==='lock')changed.lock.packages[''].version='9.9.9';
   else if(key==='tauri')changed.tauri.version='9.9.9';
   else changed[key]=changed[key].replace(`version = "${version}"`,'version = "9.9.9"');
-  assert.throws(()=>validateVersions(changed),/不一致/);
+  assert.throws(()=>validateVersions(changed),/do not match/);
 }
 const directory=await mkdtemp(join(tmpdir(),'cafd-release-'));
 try{
-  await assert.rejects(writeChecksums(directory,metadata),/三个安装包/);
+  await assert.rejects(writeChecksums(directory,metadata),/exactly three packages/);
   const names=['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk'].map(suffix=>`cafd-reader-${version}-${metadata.timestamp}-${suffix}`).sort();
   for(const name of names)await writeFile(join(directory,name),'abc');
   await writeFile(join(directory,'unexpected.txt'),'abc');
-  await assert.rejects(writeChecksums(directory,metadata),/三个安装包/);
+  await assert.rejects(writeChecksums(directory,metadata),/exactly three packages/);
   await rm(join(directory,'unexpected.txt'));
   await writeFile(join(directory,names[0]),'');
-  await assert.rejects(writeChecksums(directory,metadata),/安装包为空/);
+  await assert.rejects(writeChecksums(directory,metadata),/Empty package/);
   await rm(join(directory,names[0]));
   await mkdir(join(directory,names[0]));
   await assert.rejects(writeChecksums(directory,metadata));
   await rm(join(directory,names[0]),{recursive:true});
   await writeFile(join(directory,names[0]),'abc');
-  await assert.rejects(writeChecksums(directory,buildMetadata(version,new Date('2026-11-10T07:30:01Z'))),/三个安装包/);
+  await assert.rejects(writeChecksums(directory,buildMetadata(version,new Date('2026-11-10T07:30:01Z'))),/exactly three packages/);
   await writeChecksums(directory,metadata);
   const digest='ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
   assert.equal(await readFile(join(directory,'SHA256SUMS'),'utf8'),names.map(name=>`${digest}  ${name}\n`).join(''));
 }finally{await rm(directory,{recursive:true,force:true});}
-console.log('PASS 程序版本一致性、共享 UTC 构建编号、无效日期及跨构建产物拒绝与 SHA-256 清单');
+console.log('PASS Program version consistency, shared UTC build IDs, invalid dates, mixed-build rejection and SHA-256 manifests');
