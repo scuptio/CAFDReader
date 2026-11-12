@@ -4,9 +4,9 @@
 
 The current specification is **1.0.0-draft.1 (unstable draft)**. It is not finalized and does not promise backward compatibility between drafts; fields, component names, worlds, ABI, and protocol conventions may change. Program and specification versions are maintained independently.
 
-[![Reader Release](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml)
+[![Reader Release](https://github.com/scuptio/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/scuptio/CAFDReader/actions/workflows/release.yml)
 
-A cross-platform thin host for CAFD (CAF Document, `.cafd`) interactive documents. It supports documents conforming to the current reading profile and does not promise to open every CAF file. The content and the layout application ship with the document; the host handles the bookshelf, files, metadata, and a restricted bridge. CAFD is a document profile built on the [CAF](https://github.com/ybbh/caf) container format.
+A cross-platform thin host for CAFD (CAF Document, `.cafd`) interactive documents. It supports documents conforming to the current reading profile and does not promise to open every CAF file. The content and the layout application ship with the document; the host handles the bookshelf, files, metadata, and a restricted bridge. CAFD is a document profile built on the [CAF](https://github.com/scuptio/caf) container format.
 
 ## Quick try
 

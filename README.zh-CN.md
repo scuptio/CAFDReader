@@ -4,9 +4,9 @@
 
 当前规范为 **1.0.0-draft.1（不稳定草案）**，尚未定版，不承诺草案之间向后兼容；字段、组件名、world、ABI 和协议约定仍可能调整。程序版本与规范版本独立维护。
 
-[![Reader Release](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/ybbh/CAFDReader/actions/workflows/release.yml)
+[![Reader Release](https://github.com/scuptio/CAFDReader/actions/workflows/release.yml/badge.svg)](https://github.com/scuptio/CAFDReader/actions/workflows/release.yml)
 
-CAFD（CAF Document，`.cafd`）交互文档的跨平台薄宿主。支持符合当前阅读 profile 的文档，不承诺打开所有 CAF 文件。内容与排版应用随文档，宿主负责文档架、文件、元信息和受限桥接。CAFD 是建立在 [CAF](https://github.com/ybbh/caf) 容器格式之上的文档 profile。
+CAFD（CAF Document，`.cafd`）交互文档的跨平台薄宿主。支持符合当前阅读 profile 的文档，不承诺打开所有 CAF 文件。内容与排版应用随文档，宿主负责文档架、文件、元信息和受限桥接。CAFD 是建立在 [CAF](https://github.com/scuptio/caf) 容器格式之上的文档 profile。
 
 ## 快速体验
 
