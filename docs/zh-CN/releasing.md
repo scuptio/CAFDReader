@@ -23,12 +23,13 @@ CI 仅保留 `Reader Release`（`.github/workflows/release.yml`），支持在 A
 | Windows x64 | `cafd-reader-0.1.0-20261110T073000Z-windows-x64-setup.exe` | NSIS 安装包，当前不带 Windows 代码签名 |
 | Ubuntu x64 | `cafd-reader-0.1.0-20261110T073000Z-ubuntu-x64.deb` | 在 Ubuntu 22.04 构建，目标为 Ubuntu 22.04+ x64；需系统 WebKitGTK 4.1 等依赖，安装与运行兼容性仍须在目标系统验收 |
 | Android ARM64 | `cafd-reader-0.1.0-20261110T073000Z-android-arm64-unsigned.apk` | Android 7.0 / API 24+，未签名，另行签名后才能安装 |
+| Web | `cafd-reader-web-0.1.0-20261110T073000Z.tar.gz` | 静态宿主（`dist-host/`），含逐文件 SHA-256 的 `release.json`，供内容项目 pin 哈希后集成 |
 
 不包含 iOS 或 macOS CI 构建及 Release 附件，保留本地构建入口。安装包只含宿主，不包含作品。
 
-桌面构建执行 `cargo make test`，Linux 另用独立夹具执行原生重开验收；Android 执行基础检查，收集正式构建的 `*-unsigned.apk` 后使用 zipalign 对齐并校验，不执行签名。打包完成不代表已经通过 Windows／Android 实机验收。
+桌面构建执行 `cargo make test`，Linux 另用独立夹具执行原生重开验收；Android 执行基础检查，收集正式构建的 `*-unsigned.apk` 后使用 zipalign 对齐并校验，不执行签名；Web 宿主由 Node 脚本直接组装（不经 Rust 编译），执行单元测试后打包。打包完成不代表已经通过 Windows／Android 实机验收。
 
-三个安装包必须具有相同程序版本和时间编号，齐全且非空后生成 `SHA256SUMS`，再创建指向本次提交的构建标签，一起上传到同一 Release 草稿。构建失败不会创建标签或草稿；标签重名时创建会失败，不复用、移动标签或覆盖已有附件。工作流不会自动公开草稿，不修改或提交源码，不上传应用商店。
+三个安装包与 Web 宿主包必须具有相同程序版本和时间编号，齐全且非空后生成 `SHA256SUMS`，再创建指向本次提交的构建标签，一起上传到同一 Release 草稿。构建失败不会创建标签或草稿；标签重名时创建会失败，不复用、移动标签或覆盖已有附件。工作流不会自动公开草稿，不修改或提交源码，不上传应用商店。
 
 程序版本为预发布版本（例如 `0.1.1-beta.1`）时草稿标记为 prerelease；普通 `build-` 前缀不会导致正式程序版本被误判为预发布。同一程序版本可生成多个构建 Release，但时间编号不替代安装包内的版本比较。正式对外升级时仍须递增程序版本。
 
@@ -41,9 +42,9 @@ Android 系统要求 APK 签名后才能安装。需要安装时，下载后在�
 ## 操作步骤
 
 1. 同步修改 package.json、package-lock.json 根项目版本、src-tauri/tauri.conf.json、src-tauri/Cargo.toml 和 Cargo.lock 根包版本，更新版本说明。不要联动修改规范版本。
-2. 本地执行 `cargo make test`，审查修改并提交；提交信息使用中文。
+2. 本地执行 `cargo make test`，审查修改并提交；提交信息使用英文。
 3. 明确决定构建发布包后，在 Actions 中手动运行 `Reader Release`，选择包含此工作流的分支或标签；正式版本也可通过推送 `v0.1.0` 这样的对应标签触发。无需手动创建 `build-*` 标签或配置签名 Secrets。
-4. 等待三个平台全部通过，在 Releases 检查 `build-*` 草稿中的程序版本、UTC 编号、三个附件和 SHA256SUMS，完成必要的目标系统验收并补齐发布说明后手动公开。
+4. 等待四个构建 job 全部通过，在 Releases 检查 `build-*` 草稿中的程序版本、UTC 编号、四个附件和 SHA256SUMS，完成必要的目标系统验收并补齐发布说明后手动公开。
 
 只有最后汇总 job 拥有 `contents: write`；其余 job 为只读。仓库必须允许 GitHub Actions 创建标签和 Release。整个工作流按仓库串行运行，避免同时汇总发布。仅重跑失败 job 沿用已生成的编号；重跑整个工作流时重新生成编号。若汇总阶段已经创建标签、但后续 Release 创建失败，重跑汇总会因标签存在而停止，可重跑整个工作流生成新编号，原标签另行人工处理。
 
@@ -68,4 +69,4 @@ act workflow_dispatch -W .github/workflows/release.yml \
   --artifact-server-path "$PWD/build/act-artifacts"
 ```
 
-Android 可用 `-j android` 及 Ubuntu 24.04 镜像单独运行。镜像和 Actions 已缓存时可加 `--pull=false --action-offline-mode`；构建依赖缺失时仍需联网下载。Windows 需在 Windows 环境验证，不能使用 Linux 容器替代。检测到 act 的 `ACT` 环境变量时，最后创建 GitHub 标签和 Release 草稿的步骤会跳过。
+Android 可用 `-j android` 及 Ubuntu 24.04 镜像单独运行；Web 可用 `-j web` 单独运行。镜像和 Actions 已缓存时可加 `--pull=false --action-offline-mode`；构建依赖缺失时仍需联网下载。Windows 需在 Windows 环境验证，不能使用 Linux 容器替代。检测到 act 的 `ACT` 环境变量时，最后创建 GitHub 标签和 Release 草稿的步骤会跳过。
