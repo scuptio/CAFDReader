@@ -11,4 +11,4 @@ Reading order:
 3. [cafd.wit](../cafd.wit) — the `caf:doc@1` data interface implemented by documents.
 4. [version.json](../version.json) — the current spec version record.
 
-Terminology follows the CAF repository's [doc/spec/terminology.md](https://github.com/scuptio/caf/blob/main/doc/spec/terminology.md).
+CAFD reading terminology is defined in [terminology.md](terminology.md); CAF container terms follow the CAF repository's [doc/spec/terminology.md](https://github.com/scuptio/caf/blob/main/doc/spec/terminology.md).

@@ -11,4 +11,4 @@
 3. [cafd.wit](../cafd.wit) —— 文档实现的 `caf:doc@1` 数据接口。
 4. [version.json](../version.json) —— 当前规范版本记录。
 
-术语遵循 CAF 仓库的 [doc/spec/terminology.md](https://github.com/scuptio/caf/blob/main/doc/spec/terminology.md)。
+CAFD 阅读术语见 [terminology.md](terminology.md);CAF 容器术语遵循 CAF 仓库的 [doc/spec/terminology.md](https://github.com/scuptio/caf/blob/main/doc/spec/terminology.md)。
