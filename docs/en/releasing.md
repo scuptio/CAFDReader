@@ -22,20 +22,21 @@ CI keeps only `Reader Release` (`.github/workflows/release.yml`), which supports
 | --- | --- | --- |
 | Windows x64 | `cafd-reader-0.1.0-20261110T073000Z-windows-x64-setup.exe` | NSIS installer, currently without Windows code signing |
 | Ubuntu x64 | `cafd-reader-0.1.0-20261110T073000Z-ubuntu-x64.deb` | Built on Ubuntu 22.04, targeting Ubuntu 22.04+ x64; needs system WebKitGTK 4.1 etc. — install/run compatibility still has to be accepted on the target system |
+| macOS universal | `cafd-reader-0.1.0-20261110T073000Z-macos-universal.dmg` | Universal DMG (Apple Silicon + Intel), unsigned and unnotarized; first launch needs a right-click → Open or `xattr -cr` to drop the quarantine attribute |
 | Android ARM64 | `cafd-reader-0.1.0-20261110T073000Z-android-arm64-unsigned.apk` | Android 7.0 / API 24+, unsigned; must be signed separately before installation |
 | Web | `cafd-reader-web-0.1.0-20261110T073000Z.tar.gz` | Static host (`dist-host/`) with a per-file SHA-256 `release.json`, so content projects can pin the hash and integrate it |
 
-No iOS or macOS CI builds or Release attachments; local build entry points remain. Installers contain the host only, no works.
+No iOS CI builds or Release attachments; its local build entry point remains. Installers contain the host only, no works.
 
 Desktop builds run `cargo make test`; Linux additionally runs the native-relaunch acceptance with the standalone fixtures; Android runs basic checks, then the collected release `*-unsigned.apk` is aligned with zipalign and verified — no signing; the web host is assembled directly by a Node script (no Rust compilation) and packaged after the unit tests pass. A packaged build does not imply passing real-device acceptance on Windows/Android.
 
-The three installers and the web host tarball must share the same program version and time number. Once all four are present and non-empty, `SHA256SUMS` is generated, a build tag pointing at the commit is created, and everything is uploaded together to a single Release draft. A failed build creates neither tag nor draft; a duplicate tag name fails the creation — tags are never reused, moved, or attachments overwritten. The workflow never publishes the draft automatically, never modifies or commits source, and never uploads to app stores.
+The four installers and the web host tarball must share the same program version and time number. Once all five are present and non-empty, `SHA256SUMS` is generated, a build tag pointing at the commit is created, and everything is uploaded together to a single Release draft. A failed build creates neither tag nor draft; a duplicate tag name fails the creation — tags are never reused, moved, or attachments overwritten. The workflow never publishes the draft automatically, never modifies or commits source, and never uploads to app stores.
 
 When the program version is a pre-release (e.g. `0.1.1-beta.1`), the draft is marked prerelease; a plain `build-` prefix never makes a release program version look like a pre-release. Multiple build Releases may exist for one program version, but the time number does not replace the version comparison inside the installers. An official outward upgrade still requires bumping the program version.
 
 ## Unsigned artifacts
 
-`Reader Release` performs no code signing, reads no signing secrets, and creates or imports no keys. Windows produces an unsigned NSIS installer; Android produces a release build explicitly suffixed `-unsigned.apk` — debug signing is not used as a substitute.
+`Reader Release` performs no code signing, reads no signing secrets, and creates or imports no keys. Windows produces an unsigned NSIS installer; Android produces a release build explicitly suffixed `-unsigned.apk` — debug signing is not used as a substitute; macOS produces an unsigned, unnotarized universal DMG whose first launch requires right-click → Open or `xattr -cr`.
 
 Android requires an APK to be signed before installation. When installation is needed, download the artifact and sign it with your own key outside the workflow; later in-place upgrades keep using the same key. Signing changes the APK bytes — the Release's SHA256SUMS corresponds to the original unsigned attachment.
 
@@ -44,11 +45,13 @@ Android requires an APK to be signed before installation. When installation is n
 1. Bump the versions in package.json, the package-lock.json root project, src-tauri/tauri.conf.json, src-tauri/Cargo.toml, and the Cargo.lock root package in sync, and update the release notes. Do not touch the spec version.
 2. Run `cargo make test` locally, review the changes, and commit; commit messages are written in English.
 3. Once producing release packages is explicitly decided, run `Reader Release` manually in Actions, choosing the branch or tag containing the workflow; an official release can also be triggered by pushing the matching tag, e.g. `v0.1.0`. No need to create `build-*` tags manually or to configure signing secrets.
-4. Wait for all four build jobs to pass, check the `build-*` draft in Releases for the program version, the UTC number, the four attachments, and SHA256SUMS, finish the necessary target-system acceptance, complete the release notes, and publish manually.
+4. Wait for all five build jobs to pass, check the `build-*` draft in Releases for the program version, the UTC number, the five attachments, and SHA256SUMS, finish the necessary target-system acceptance, complete the release notes, and publish manually.
 
 Only the final aggregation job has `contents: write`; every other job is read-only. The repository must allow GitHub Actions to create tags and Releases. The whole workflow runs serially per repository to avoid concurrent aggregations. Re-running only failed jobs reuses the generated number; re-running the whole workflow generates a new one. If the aggregation stage already created the tag but the Release creation then failed, re-running the aggregation stops on the existing tag — re-run the whole workflow for a new number and handle the old tag manually.
 
 ## Local verification with act
+
+Artifact actions are pinned to `upload-artifact@v5.0.0` and `download-artifact@v6.0.0` for compatibility with act 0.2.97. Newer upload versions can fail with `unknown field "mime_type"` or blob signature errors in act's artifact server ([upstream issue](https://github.com/nektos/act/issues/6114)). Keep upload and download versions compatible when updating; verify a local upload/download round trip before changing these pins. The workflow uses the same actions on GitHub and locally, and upload failures remain fatal.
 
 Run from the repository root; requires act and a reachable Docker. checkout uses the default event commit: on GitHub it checks out the triggering commit; act by default copies the current local sources (including uncommitted changes), and no token is needed for checkout. Do not add `--no-skip-checkout` — that would perform a real remote checkout.
 

@@ -31,11 +31,11 @@ for(const key of ['lock','tauri','cargo','cargoLock']){
 }
 const directory=await mkdtemp(join(tmpdir(),'cafd-release-'));
 try{
-  await assert.rejects(writeChecksums(directory,metadata),/exactly four packages/);
-  const names=[...['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk'].map(suffix=>`cafd-reader-${version}-${metadata.timestamp}-${suffix}`),`cafd-reader-web-${version}-${metadata.timestamp}.tar.gz`].sort();
+  await assert.rejects(writeChecksums(directory,metadata),/exactly five packages/);
+  const names=[...['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk','macos-universal.dmg'].map(suffix=>`cafd-reader-${version}-${metadata.timestamp}-${suffix}`),`cafd-reader-web-${version}-${metadata.timestamp}.tar.gz`].sort();
   for(const name of names)await writeFile(join(directory,name),'abc');
   await writeFile(join(directory,'unexpected.txt'),'abc');
-  await assert.rejects(writeChecksums(directory,metadata),/exactly four packages/);
+  await assert.rejects(writeChecksums(directory,metadata),/exactly five packages/);
   await rm(join(directory,'unexpected.txt'));
   await writeFile(join(directory,names[0]),'');
   await assert.rejects(writeChecksums(directory,metadata),/Empty package/);
@@ -44,7 +44,7 @@ try{
   await assert.rejects(writeChecksums(directory,metadata));
   await rm(join(directory,names[0]),{recursive:true});
   await writeFile(join(directory,names[0]),'abc');
-  await assert.rejects(writeChecksums(directory,buildMetadata(version,new Date('2026-11-10T07:30:01Z'))),/exactly four packages/);
+  await assert.rejects(writeChecksums(directory,buildMetadata(version,new Date('2026-11-10T07:30:01Z'))),/exactly five packages/);
   await writeChecksums(directory,metadata);
   const digest='ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
   assert.equal(await readFile(join(directory,'SHA256SUMS'),'utf8'),names.map(name=>`${digest}  ${name}\n`).join(''));

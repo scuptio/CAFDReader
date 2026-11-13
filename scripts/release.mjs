@@ -33,11 +33,11 @@ async function versionFor(sourceTag=''){
   return validateVersions({metadata:JSON.parse(metadata),lock:JSON.parse(lock),tauri:JSON.parse(tauri),cargo,cargoLock},sourceTag);
 }
 export async function writeChecksums(directory,{version,timestamp}){
-  const expected=['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk'].map(suffix=>`cafd-reader-${version}-${timestamp}-${suffix}`);
+  const expected=['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk','macos-universal.dmg'].map(suffix=>`cafd-reader-${version}-${timestamp}-${suffix}`);
   expected.push(`cafd-reader-web-${version}-${timestamp}.tar.gz`);
   expected.sort();
   const actual=(await readdir(directory)).sort();
-  if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error('Release assets must contain exactly four packages: Windows x64, Ubuntu x64, Android ARM64 and the web host tarball.');
+  if(JSON.stringify(actual)!==JSON.stringify(expected))throw Error('Release assets must contain exactly five packages: Windows x64, Ubuntu x64, Android ARM64, macOS universal and the web host tarball.');
   const lines=[];
   for(const name of expected){
     const bytes=await readFile(resolve(directory,name));
