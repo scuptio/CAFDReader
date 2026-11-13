@@ -59,7 +59,7 @@ jobs:
             bundle: deb
             extension: deb
             suffix: ubuntu-x64.deb
-          - os: macos-latest
+          - os: macos-15-intel   # macos-latest(arm64)容量紧张时改用 Intel 池;universal 构建在两架构上均可(此标签 2027-08 退役后回到 macos-latest)
             label: macos
             platform: macos
             target: universal-apple-darwin
