@@ -51,6 +51,6 @@ source build/android-env.sh
 
 The default build is an ARM64 debug APK at `src-tauri/gen/android/app/build/outputs/apk/`; for the x86_64 emulator use `cargo make reader android -- --target x86_64`. The APK contains no content documents.
 
-`cargo make reader android --release` produces an ARM64 unsigned release APK. This repository's `Reader Release` workflow only aligns and verifies the APK — it does not sign and needs no signing secrets; an unsigned APK must be signed separately before installation. Release steps are in [the release notes](releasing.md).
+`cargo make reader android --release` produces an ARM64 unsigned release APK, which local installs must sign separately. This repository's `Reader Release` workflow aligns it with zipalign, then signs it with the fixed keystore from Secrets via apksigner (v1+v2), producing a directly installable release APK. Release steps are in [the release notes](releasing.md).
 
 Toolchain references: [Tauri prerequisites](https://tauri.app/start/prerequisites/), [Android command-line tools download & SHA-256](https://developer.android.com/studio#command-line-tools-only), [sdkmanager](https://developer.android.com/tools/sdkmanager), [Visual Studio command-line installation](https://learn.microsoft.com/en-us/visualstudio/install/use-command-line-parameters-to-install-visual-studio).

@@ -141,16 +141,43 @@ jobs:
       - run: cargo make test-unit
       - run: cargo make setup-android -- --yes --skip-system --skip-npm
       - run: cargo make reader android --release
-      - name: 对齐并收集未签名正式 APK
+      # zipalign must run before apksigner; the keystore lives only in a temp dir. Under act
+      # without signing secrets, a throwaway keystore keeps the pipeline verifiable.
+      - name: 对齐、签名并收集正式 APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           source build/android-env.sh
           tools="$ANDROID_HOME/build-tools/$(node -p "JSON.parse(require('fs').readFileSync('config/android-toolchain.json')).build_tools")"
           mapfile -d '' packages < <(find src-tauri/gen/android/app/build/outputs/apk -type f -path '*/release/*-unsigned.apk' -print0)
           test "${#packages[@]}" -eq 1
+          workdir="$(mktemp -d)"
+          trap 'rm -rf "$workdir"' EXIT
+          "$tools/zipalign" -P 16 -f 4 "${packages[0]}" "$workdir/aligned.apk"
+          "$tools/zipalign" -c -P 16 4 "$workdir/aligned.apk"
+          if [[ -n "$ANDROID_KEYSTORE_BASE64" ]]; then
+            base64 -d <<<"$ANDROID_KEYSTORE_BASE64" > "$workdir/keystore.jks"
+          elif [[ "${ACT:-}" == "true" ]]; then
+            echo "::warning::缺少签名 Secrets,act 本地运行改用一次性密钥库,仅验证流程,产物不得分发"
+            ANDROID_KEYSTORE_PASSWORD='act-throwaway'
+            ANDROID_KEY_PASSWORD='act-throwaway'
+            ANDROID_KEY_ALIAS='act'
+            keytool -genkeypair -keystore "$workdir/keystore.jks" -alias "$ANDROID_KEY_ALIAS" \
+              -keyalg RSA -keysize 2048 -validity 1 -dname "CN=act" \
+              -storepass "$ANDROID_KEYSTORE_PASSWORD" -keypass "$ANDROID_KEY_PASSWORD"
+          else
+            echo '缺少签名 Secrets:ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_PASSWORD / ANDROID_KEY_ALIAS' >&2
+            exit 1
+          fi
           mkdir -p release-assets
-          apk="release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-android-arm64-unsigned.apk"
-          "$tools/zipalign" -P 16 -f 4 "${packages[0]}" "$apk"
-          "$tools/zipalign" -c -P 16 4 "$apk"
+          apk="release-assets/cafd-reader-$VERSION-$BUILD_TIMESTAMP-android-arm64.apk"
+          "$tools/apksigner" sign --ks "$workdir/keystore.jks" --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" --key-pass "pass:$ANDROID_KEY_PASSWORD" \
+            --out "$apk" "$workdir/aligned.apk"
+          "$tools/apksigner" verify --print-certs "$apk"
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: release-android

@@ -32,7 +32,7 @@ for(const key of ['lock','tauri','cargo','cargoLock']){
 const directory=await mkdtemp(join(tmpdir(),'cafd-release-'));
 try{
   await assert.rejects(writeChecksums(directory,metadata),/exactly five packages/);
-  const names=[...['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64-unsigned.apk','macos-universal.dmg'].map(suffix=>`cafd-reader-${version}-${metadata.timestamp}-${suffix}`),`cafd-reader-web-${version}-${metadata.timestamp}.tar.gz`].sort();
+  const names=[...['windows-x64-setup.exe','ubuntu-x64.deb','android-arm64.apk','macos-universal.dmg'].map(suffix=>`cafd-reader-${version}-${metadata.timestamp}-${suffix}`),`cafd-reader-web-${version}-${metadata.timestamp}.tar.gz`].sort();
   for(const name of names)await writeFile(join(directory,name),'abc');
   await writeFile(join(directory,'unexpected.txt'),'abc');
   await assert.rejects(writeChecksums(directory,metadata),/exactly five packages/);
